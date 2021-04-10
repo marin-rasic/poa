@@ -127,3 +127,31 @@ void AlignAndCreateGraph(DAGGraph &graph, const char *query, unsigned int query_
 
     createAlignedGraph(graph, query_id, target_id, alignVector);
 }
+
+std::vector<Node *> DAGGraph::TopologicalSort() {
+    std::vector<Node *> sorted_nodes;
+
+    //čvorovi koji nemaju ulazne rubove
+    std::queue<Node *> nodes;
+
+    for (Node *n : this->start_nodes) {
+        nodes.push(n);
+    }
+
+    while (!nodes.empty()) {
+        Node *node = nodes.front();
+        nodes.pop();
+        sorted_nodes.push_back(node);
+        for (Edge *e : node->outgoing_edges) {
+            //ako prvi put prolazimo kroz čvor postavi mu broj preostalih ulazećih rubova
+            if (e->destination->num_remain_edges == -1) {
+                e->destination->num_remain_edges = e->destination->incoming_edges.size();
+            }
+            //ako cvor vise nema ulaznih rubova dodamo ga u sortiranu listu
+            if (--e->destination->num_remain_edges == 0) {
+                nodes.push(e->destination);
+            }
+        }
+    }
+    return sorted_nodes;
+}

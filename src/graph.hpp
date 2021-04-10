@@ -15,7 +15,7 @@ class Node {
     std::vector<Edge *> outgoing_edges;
 
     //number of remaining incoming edges - used for topological sort
-    int num_remain_edges;
+    int num_remain_edges = -1;
 
     Node(char letter) : letter(letter){};
     Node(char letter, const char *sequence_id, unsigned int index) : letter(letter) {
