@@ -3,8 +3,6 @@
 #include <queue>
 #include <stack>
 
-#include "alignment.hpp"
-
 Node *DAGGraph::addNode(char letter, const char *sequence_id, unsigned int index, Node *prev_node) {
     Node *new_node = new Node(letter, sequence_id, index);
     if (prev_node == nullptr) {  //početni node
@@ -26,30 +24,22 @@ void createAlignedGraph(DAGGraph &graph, const char *query_id, const char *targe
     char query = std::get<0>(align_vector.top());
     char target = std::get<1>(align_vector.top());
     if (query == '-') {
-        prev_target_node = graph.addNode(target, target_id, target_index);
+        prev_target_node = graph.addNode(target, target_id, target_index++);
         prev_query_node = prev_target_node;
-        target_index++;
 
     } else if (target == '-') {
-        prev_query_node = graph.addNode(query, query_id, query_index);
+        prev_query_node = graph.addNode(query, query_id, query_index++);
         prev_target_node = prev_query_node;
-        query_index++;
 
     } else if (query == target) {
-        prev_query_node = graph.addNode(query, query_id, query_index);
+        prev_query_node = graph.addNode(query, query_id, query_index++);
         prev_target_node = prev_query_node;
-        std::tuple<const char *, unsigned int> origin(target_id, target_index);
+        std::tuple<const char *, unsigned int> origin(target_id, target_index++);
         prev_query_node->origin_of_letter.push_back(origin);
 
-        query_index++;
-        target_index++;
-
     } else {
-        prev_query_node = graph.addNode(query, query_id, query_index);
-        prev_target_node = graph.addNode(target, target_id, target_index);
-
-        query_index++;
-        target_index++;
+        prev_query_node = graph.addNode(query, query_id, query_index++);
+        prev_target_node = graph.addNode(target, target_id, target_index++);
     }
 
     align_vector.pop();
@@ -59,22 +49,20 @@ void createAlignedGraph(DAGGraph &graph, const char *query_id, const char *targe
         query = std::get<0>(align_vector.top());
         target = std::get<1>(align_vector.top());
         if (query == '-') {
-            target_node = graph.addNode(target, target_id, target_index, prev_target_node);
+            target_node = graph.addNode(target, target_id, target_index++, prev_target_node);
             prev_target_node = target_node;
-            target_index++;
 
         } else if (target == '-') {
-            query_node = graph.addNode(query, query_id, query_index, prev_query_node);
+            query_node = graph.addNode(query, query_id, query_index++, prev_query_node);
             prev_query_node = query_node;
-            query_index++;
 
         } else if (query == target) {
-            query_node = graph.addNode(query, query_id, query_index, prev_query_node);
-            std::tuple<const char *, unsigned int> origin(target_id, target_index);
+            query_node = graph.addNode(query, query_id, query_index++, prev_query_node);
+            std::tuple<const char *, unsigned int> origin(target_id, target_index++);
             query_node->origin_of_letter.push_back(origin);
             target_node = query_node;
 
-            //sprječava stvaranje duplikatnih edgova
+            //spriječava stvaranje duplikatnih edgova
             if (prev_query_node != prev_target_node) {
                 Edge *target_edge = new Edge(prev_target_node, query_node);
                 prev_target_node->outgoing_edges.push_back(target_edge);
@@ -83,29 +71,27 @@ void createAlignedGraph(DAGGraph &graph, const char *query_id, const char *targe
 
             prev_target_node = target_node;
             prev_query_node = query_node;
-            query_index++;
-            target_index++;
+
         } else {
-            query_node = graph.addNode(query, query_id, query_index, prev_query_node);
-            target_node = graph.addNode(target, target_id, target_index, prev_target_node);
+            query_node = graph.addNode(query, query_id, query_index++, prev_query_node);
+            target_node = graph.addNode(target, target_id, target_index++, prev_target_node);
 
             prev_target_node = target_node;
             prev_query_node = query_node;
-            query_index++;
-            target_index++;
         }
         align_vector.pop();
     }
 }
 
 void AlignAndCreateGraph(DAGGraph &graph, const char *query, unsigned int query_len, const char *query_id, const char *target,
-                         unsigned int target_len, const char *target_id, int match, int mismatch, int gap) {
+                         unsigned int target_len, const char *target_id, int match, int mismatch, int gap, Aligner &aligner) {
     //matrica za poravnavanje dva niza
     std::vector<std::vector<Cell>> align_matrix(query_len + 1, std::vector<Cell>(target_len + 1));
-    GlobalAlignment(align_matrix, query, query_len, target, target_len, match, mismatch, gap);
+    aligner.align(align_matrix, query, query_len, target, target_len, match, mismatch, gap);
 
     //stog čiji elementi opisuju izračunato poravnanje
-    std::stack<std::tuple<char, char>> alignVector;
+    std::stack<std::tuple<char, char>>
+        alignVector;
     int i = query_len, j = target_len;
     while (i > 0 || j > 0) {
         switch (align_matrix[i][j].direction) {

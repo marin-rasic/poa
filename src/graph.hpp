@@ -2,6 +2,8 @@
 #include <tuple>
 #include <vector>
 
+#include "alignment.hpp"
+
 class Edge;
 
 class Node {
@@ -42,4 +44,4 @@ class DAGGraph {
 };
 
 void AlignAndCreateGraph(DAGGraph &graph, const char *query, unsigned int query_len, const char *query_id, const char *target,
-                         unsigned int target_len, const char *target_id, int match, int mismatch, int gap);
+                         unsigned int target_len, const char *target_id, int match, int mismatch, int gap, Aligner &aligner);

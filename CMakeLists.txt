@@ -14,3 +14,4 @@ add_library(graph "src/graph.cpp")
 target_link_libraries(graph alignment)
 
 target_link_libraries(${PROJECT_NAME} graph)
+
