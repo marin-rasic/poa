@@ -43,5 +43,11 @@ std::vector<Node *> Graph::TopologicalSort() {
             }
         }
     }
+
+    //resetiranje varijable num_remain_edges za moguće buduće topološko sortiranje
+    for (Node *node : sorted_nodes) {
+        node->num_remain_edges = -1;
+    }
+
     return sorted_nodes;
 }
