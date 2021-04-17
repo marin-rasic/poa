@@ -11,7 +11,7 @@ add_executable(${PROJECT_NAME} "src/poa.cpp")
 add_library(alignment "src/alignment.cpp")
 add_library(graph "src/graph.cpp")
 
-target_link_libraries(graph alignment)
+target_link_libraries(alignment graph)
 
-target_link_libraries(${PROJECT_NAME} graph)
+target_link_libraries(${PROJECT_NAME} alignment)
 

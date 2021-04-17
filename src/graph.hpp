@@ -1,8 +1,5 @@
-#include <string>
 #include <tuple>
 #include <vector>
-
-#include "alignment.hpp"
 
 class Edge;
 
@@ -19,6 +16,9 @@ class Node {
     //number of remaining incoming edges - used for topological sort
     int num_remain_edges = -1;
 
+    //index in topological sort
+    int index;
+
     Node(char letter) : letter(letter){};
     Node(char letter, const char *sequence_id, unsigned int index) : letter(letter) {
         std::tuple<const char *, unsigned int> origin(sequence_id, index);
@@ -34,14 +34,12 @@ class Edge {
     Edge(Node *origin, Node *destination) : origin(origin), destination(destination){};
 };
 
-class DAGGraph {
+class Graph {
    public:
     std::vector<Node *> start_nodes;
+    int size = 0;
 
     Node *addNode(char letter, const char *sequence_id, unsigned int index, Node *prevNode = nullptr);
 
     std::vector<Node *> TopologicalSort();
 };
-
-void AlignAndCreateGraph(DAGGraph &graph, const char *query, unsigned int query_len, const char *query_id, const char *target,
-                         unsigned int target_len, const char *target_id, int match, int mismatch, int gap, Aligner &aligner);
