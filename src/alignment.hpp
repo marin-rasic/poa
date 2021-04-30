@@ -1,13 +1,15 @@
 #include "graph.hpp"
 
 enum Direction { None,
-                 Diagonal,
+                 DiagonalMatch,
+                 DiagonalMismatch,
                  Vertical,
                  Horizontal };
 
 struct Cell {
     int value;
     Direction direction;
+    std::tuple<int, int> parent_index;
 };
 
 class Aligner {
