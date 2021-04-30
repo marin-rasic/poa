@@ -37,9 +37,7 @@ class Edge {
 class Graph {
    public:
     std::vector<Node *> start_nodes;
-    int size = 0;
 
-    Node *addNode(char letter, const char *sequence_id, unsigned int index, Node *prevNode = nullptr);
-
+    static Node *addNewNode(char letter, const char *sequence_id, unsigned int index, Node *prevNode = nullptr);
     std::vector<Node *> TopologicalSort();
 };

@@ -10,6 +10,7 @@ int GlobalAligner::AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix, con
     for (int j = 1; j < target_len + 1; j++) {
         align_matrix[0][j] = {j * gap, Direction::Horizontal};
     }
+    align_matrix[0][0] = {0, Direction::None};
 
     for (int i = 1; i < query_len + 1; i++) {
         for (int j = 1; j < target_len + 1; j++) {
@@ -34,6 +35,74 @@ int GlobalAligner::AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix, con
         }
     }
     return align_matrix[query_len][target_len].value;
+}
+
+void GlobalAligner::GraphTwoSeq(Graph &empty_graph, std::vector<std::vector<Cell>> &align_matrix, const char *query, unsigned int query_len, const char *query_id, const char *target,
+                                unsigned int target_len, const char *target_id) {
+    Node *prev_query_node = nullptr, *prev_target_node = nullptr;
+    unsigned int query_index = query_len, target_index = target_len;
+
+    bool finished = false;
+    while (!finished) {
+        switch (align_matrix[query_index][target_index].direction) {
+            case Direction::DiagonalMatch: {
+                Node *query_node = Graph::addNewNode(query[query_index - 1], query_id, query_index, prev_query_node);
+                Node *target_node = query_node;
+                std::tuple<const char *, unsigned int> origin(target_id, target_index);
+                query_node->origin_of_letter.push_back(origin);
+
+                //dodaje edge koji nedostaje u slučaju da su prethodno bila dva različita noda
+                if (prev_target_node != prev_query_node && prev_target_node != nullptr) {
+                    Edge *edge = new Edge(query_node, prev_target_node);
+                    query_node->outgoing_edges.push_back(edge);
+                    prev_target_node->incoming_edges.push_back(edge);
+                }
+                prev_target_node = target_node;
+                prev_query_node = query_node;
+                query_index--;
+                target_index--;
+                break;
+            }
+
+            case Direction::DiagonalMismatch: {
+                prev_query_node = Graph::addNewNode(query[query_index - 1], query_id, query_index, prev_query_node);
+                prev_target_node = Graph::addNewNode(target[target_index - 1], target_id, target_index, prev_target_node);
+                query_index--;
+                target_index--;
+                break;
+            }
+
+            case Direction::Horizontal: {
+                prev_target_node = Graph::addNewNode(target[target_index - 1], target_id, target_index, prev_target_node);
+                target_index--;
+                break;
+            }
+
+            case Direction::Vertical: {
+                prev_query_node = Graph::addNewNode(query[query_index - 1], query_id, query_index, prev_query_node);
+                query_index--;
+                break;
+            }
+
+            case Direction::None: {
+                finished = true;
+                if (prev_query_node == prev_target_node) {
+                    empty_graph.start_nodes.push_back(prev_target_node);
+                } else {
+                    empty_graph.start_nodes.push_back(prev_target_node);
+                    empty_graph.start_nodes.push_back(prev_query_node);
+                }
+                break;
+            }
+        }
+    }
+}
+
+void GlobalAligner::AlignAndGraphTwoSeq(Graph &empty_graph, const char *query, unsigned int query_len, const char *query_id, const char *target,
+                                        unsigned int target_len, const char *target_id, int match, int mismatch, int gap) {
+    std::vector<std::vector<Cell>> align_matrix(query_len + 1, std::vector<Cell>(target_len + 1));
+    GlobalAligner::AlignTwoSeq(align_matrix, query, query_len, target, target_len, match, mismatch, gap);
+    GlobalAligner::GraphTwoSeq(empty_graph, align_matrix, query, query_len, query_id, target, target_len, target_id);
 }
 
 int GlobalAligner::AlignSeqAndGraph(const char *sequence, unsigned int sequence_len, Graph &graph, int match, int mismatch, int gap) {

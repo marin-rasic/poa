@@ -2,16 +2,13 @@
 
 #include <queue>
 
-Node *Graph::addNode(char letter, const char *sequence_id, unsigned int index, Node *prev_node) {
+Node *Graph::addNewNode(char letter, const char *sequence_id, unsigned int index, Node *prev_node) {
     Node *new_node = new Node(letter, sequence_id, index);
-    if (prev_node == nullptr) {  //početni node
-        this->start_nodes.push_back(new_node);
-    } else {
-        Edge *edge = new Edge(prev_node, new_node);
-        prev_node->outgoing_edges.push_back(edge);
-        new_node->incoming_edges.push_back(edge);
+    if (prev_node != nullptr) {
+        Edge *edge = new Edge(new_node, prev_node);
+        new_node->outgoing_edges.push_back(edge);
+        prev_node->incoming_edges.push_back(edge);
     }
-    size++;
     return new_node;
 }
 
