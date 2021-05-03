@@ -14,56 +14,84 @@ struct Cell {
 
 class Aligner {
    public:
-    //funkcije za dva niza
-    virtual int AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix, const char *query, unsigned int query_len, const char *target,
-                            unsigned int target_len, int match, int mismatch, int gap) = 0;
+    Aligner(int match, int mismatch, int gap) : match(match), mismatch(mismatch), gap(gap){};
 
-    virtual void GraphTwoSeq(Graph &empty_graph, std::vector<std::vector<Cell>> &align_matrix, const char *query, unsigned int query_len, const char *query_id, const char *target,
-                             unsigned int target_len, const char *target_id) = 0;
+    //funkcije za poravnavanje dva niza
+    virtual int AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix,
+                            const char *query, unsigned int query_len,
+                            const char *target, unsigned int target_len) = 0;
 
-    virtual void AlignAndGraphTwoSeq(Graph &empty_graph, const char *query, unsigned int query_len, const char *query_id, const char *target,
-                                     unsigned int target_len, const char *target_id, int match, int mismatch, int gap) = 0;
+    //funkcije za stvaranje grafa na temelju poravnanja dva niza
+    virtual void GraphTwoSeq(Graph &empty_graph,
+                             std::vector<std::vector<Cell>> &align_matrix,
+                             const char *query, unsigned int query_len, const char *query_id,
+                             const char *target, unsigned int target_len, const char *target_id) = 0;
 
-    //funkcije za niz i graf
-    virtual int AlignSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix, const char *sequence, unsigned int sequence_len, Graph &graph, int match, int mismatch, int gap) = 0;
+    //općenita funckija za poravnavanje dva niza i stvaranje novog grafa na temelju tog poravnanja
+    virtual void AlignAndGraphTwoSeq(Graph &empty_graph,
+                                     const char *query, unsigned int query_len, const char *query_id,
+                                     const char *target, unsigned int target_len, const char *target_id);
 
-    virtual void GraphSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix, Graph &query, const char *target, unsigned int target_len, const char *target_id) = 0;
+    //funkcije za poravnavanje niza i grafa
+    virtual int AlignSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix,
+                                 std::vector<Node *> &graph,  //topologicly sorted vector of nodes
+                                 const char *target, unsigned int target_len) = 0;
 
-    virtual void AlignAndGraphSeqAndGraph(Graph &query, const char *target, unsigned int target_len,
-                                          const char *target_id, int match, int mismatch, int gap) = 0;
+    //funckija za stvaranje grafa na temelju poravnanja niza i grafa
+    virtual void GraphSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix,
+                                  Graph &graph, std::vector<Node *> &query,
+                                  const char *target, unsigned int target_len, const char *target_id) = 0;
 
-    //funkcije za dva grafa
-    virtual int AlignTwoGraph(std::vector<std::vector<Cell>> &align_matrix, Graph &query, Graph &target, int match, int mismatch, int gap) = 0;
+    //općenita funkcija za poravnavanje niza i grafa i stvaranje novog grafa na temelju tog poravnanja
+    virtual void AlignAndGraphSeqAndGraph(Graph &query,
+                                          const char *target, unsigned int target_len, const char *target_id);
 
-    virtual void GraphTwoGraph(std::vector<std::vector<Cell>> &align_matrix, Graph &query, Graph &target) = 0;
+    //funkcije za poravnavanje dva grafa
+    virtual int AlignTwoGraph(std::vector<std::vector<Cell>> &align_matrix,
+                              std::vector<Node *> &query_graph,
+                              std::vector<Node *> &target_graph) = 0;
 
-    virtual void AlignAndGraphTwoGraph(Graph &query, Graph &target, int match, int mismatch, int gap) = 0;
+    //funckija za stvaranje grafa na temelju poravnanja dva grafa
+    virtual void GraphTwoGraph(std::vector<std::vector<Cell>> &align_matrix,
+                               Graph &query, std::vector<Node *> &query_graph,
+                               std::vector<Node *> &target_graph) = 0;
+
+    //općenita funckija za poravnavanje dva grafa i stvaranje novog grafa na temelju tog poravnanja
+    virtual void AlignAndGraphTwoGraph(Graph &query,
+                                       Graph &target);
+
+   protected:
+    int match;
+    int mismatch;
+    int gap;
 };
 
 class GlobalAligner : public Aligner {
    public:
-    //funckije za dva niza
-    virtual int AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix, const char *query, unsigned int query_len, const char *target,
-                            unsigned int target_len, int match, int mismatch, int gap);
+    GlobalAligner(int match, int mismatch, int gap) : Aligner(match, mismatch, gap){};
 
-    virtual void GraphTwoSeq(Graph &empty_graph, std::vector<std::vector<Cell>> &align_matrix, const char *query, unsigned int query_len, const char *query_id, const char *target,
-                             unsigned int target_len, const char *target_id);
+    virtual int AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix,
+                            const char *query, unsigned int query_len,
+                            const char *target, unsigned int target_len);
 
-    virtual void AlignAndGraphTwoSeq(Graph &empty_graph, const char *query, unsigned int query_len, const char *query_id, const char *target,
-                                     unsigned int target_len, const char *target_id, int match, int mismatch, int gap);
+    virtual void GraphTwoSeq(Graph &empty_graph,
+                             std::vector<std::vector<Cell>> &align_matrix,
+                             const char *query, unsigned int query_len, const char *query_id,
+                             const char *target, unsigned int target_len, const char *target_id);
 
-    //funkcije za graf i niz
-    virtual int AlignSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix, const char *sequence, unsigned int sequence_len, Graph &graph, int match, int mismatch, int gap);
+    virtual int AlignSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix,
+                                 std::vector<Node *> &graph,
+                                 const char *target, unsigned int target_len);
 
-    virtual void GraphSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix, Graph &query, const char *target, unsigned int target_len, const char *target_id);
+    virtual void GraphSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix,
+                                  Graph &graph, std::vector<Node *> &query,
+                                  const char *target, unsigned int target_len, const char *target_id);
 
-    virtual void AlignAndGraphSeqAndGraph(Graph &query, const char *target, unsigned int target_len,
-                                          const char *target_id, int match, int mismatch, int gap);
+    virtual int AlignTwoGraph(std::vector<std::vector<Cell>> &align_matrix,
+                              std::vector<Node *> &query_graph,
+                              std::vector<Node *> &target_graph);
 
-    //funkcije za dva grafa
-    virtual int AlignTwoGraph(std::vector<std::vector<Cell>> &align_matrix, Graph &query, Graph &target, int match, int mismatch, int gap);
-
-    virtual void GraphTwoGraph(std::vector<std::vector<Cell>> &align_matrix, Graph &query, Graph &target);
-
-    virtual void AlignAndGraphTwoGraph(Graph &query, Graph &target, int match, int mismatch, int gap);
+    virtual void GraphTwoGraph(std::vector<std::vector<Cell>> &align_matrix,
+                               Graph &query, std::vector<Node *> &query_graph,
+                               std::vector<Node *> &target_graph);
 };
