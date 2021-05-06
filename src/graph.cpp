@@ -48,3 +48,19 @@ std::vector<Node *> Graph::TopologicalSort() {
 
     return sorted_nodes;
 }
+
+void LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence_len, const char *sequence_id) {
+    Node *new_node;
+    Node *prev_node = nullptr;
+    for (int i = 0; i < sequence_len; i++) {
+        new_node = new Node(sequence[i], sequence_id, i + 1);
+        if (prev_node) {
+            Edge *edge = new Edge(prev_node, new_node);
+            prev_node->outgoing_edges.push_back(edge);
+            new_node->incoming_edges.push_back(edge);
+        } else {
+            empty_graph.start_nodes.push_back(new_node);
+        }
+        prev_node = new_node;
+    }
+}

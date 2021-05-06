@@ -13,6 +13,9 @@ class Node {
     std::vector<Edge *> incoming_edges;
     std::vector<Edge *> outgoing_edges;
 
+    //ostali nodovi s kojima je ovaj node alignan
+    std::vector<Node *> aligned_nodes;
+
     //number of remaining incoming edges - used for topological sort
     int num_remain_edges = -1;
 
@@ -41,3 +44,5 @@ class Graph {
     static Node *addNewNode(char letter, const char *sequence_id, unsigned int index, Node *prevNode = nullptr);
     std::vector<Node *> TopologicalSort();
 };
+
+void LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence_len, const char *sequence_id);

@@ -2,9 +2,9 @@
 
 #include <algorithm>
 
-//određuje koja je Cell veća, priotizirajući one koje imaju manji index reda
+//određuje koja je Cell veća, priotizirajući one koje imaju veci index reda
 bool max_cell(Cell a, Cell b) {
-    return a.value < b.value || a.value == b.value && std::get<0>(a.parent_index) > std::get<0>(b.parent_index);
+    return a.value < b.value || a.value == b.value && std::get<0>(a.parent_index) < std::get<0>(b.parent_index);
 }
 
 void Aligner::AlignAndGraphTwoSeq(Graph &empty_graph,
@@ -12,15 +12,28 @@ void Aligner::AlignAndGraphTwoSeq(Graph &empty_graph,
                                   const char *target, unsigned int target_len, const char *target_id) {
     std::vector<std::vector<Cell>> align_matrix(query_len + 1, std::vector<Cell>(target_len + 1));
     AlignTwoSeq(align_matrix, query, query_len, target, target_len);
-    GraphTwoSeq(empty_graph, align_matrix, query, query_len, query_id, target, target_len, target_id);
+
+    LinearGraph(empty_graph, query, query_len, query_id);
+    std::vector<Node *> top_query = empty_graph.TopologicalSort();
+
+    Graph target_graph;
+    LinearGraph(target_graph, target, target_len, target_id);
+    std::vector<Node *> top_target = target_graph.TopologicalSort();
+
+    CreateGraph(align_matrix, empty_graph, top_query, top_target);
 }
 
 void Aligner::AlignAndGraphSeqAndGraph(Graph &query,
                                        const char *target, unsigned int target_len, const char *target_id) {
-    std::vector<Node *> graph = query.TopologicalSort();
-    std::vector<std::vector<Cell>> align_matrix(graph.size() + 1, std::vector<Cell>(target_len + 1));
-    AlignSeqAndGraph(align_matrix, graph, target, target_len);
-    GraphSeqAndGraph(align_matrix, query, graph, target, target_len, target_id);
+    std::vector<Node *> top_graph = query.TopologicalSort();
+    std::vector<std::vector<Cell>> align_matrix(top_graph.size() + 1, std::vector<Cell>(target_len + 1));
+    AlignSeqAndGraph(align_matrix, top_graph, target, target_len);
+
+    Graph target_graph;
+    LinearGraph(target_graph, target, target_len, target_id);
+    std::vector<Node *> top_target = target_graph.TopologicalSort();
+
+    CreateGraph(align_matrix, query, top_graph, top_target);
 }
 
 void Aligner::AlignAndGraphTwoGraph(Graph &query,
@@ -30,32 +43,120 @@ void Aligner::AlignAndGraphTwoGraph(Graph &query,
     std::vector<std::vector<Cell>> align_matrix(query_graph.size() + 1, std::vector<Cell>(target_graph.size() + 1));
 
     AlignTwoGraph(align_matrix, query_graph, target_graph);
-    GraphTwoGraph(align_matrix, query, query_graph, target_graph);
+    CreateGraph(align_matrix, query, query_graph, target_graph);
+}
+
+void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
+                          Graph &query, std::vector<Node *> &query_graph,
+                          std::vector<Node *> &target_graph) {
+    Node *prev_query_node = nullptr, *prev_target_node = nullptr;
+    unsigned int query_index = query_graph.size(), target_index = target_graph.size();
+
+    bool finished = false;
+    while (!finished) {
+        Direction direction = align_matrix[query_index][target_index].direction;
+        switch (direction) {
+            case DiagonalMatch: {
+                for (std::tuple<const char *, unsigned int> origin : target_graph[target_index - 1]->origin_of_letter) {
+                    query_graph[query_index - 1]->origin_of_letter.push_back(origin);
+                }
+
+                for (Edge *edge : target_graph[target_index - 1]->incoming_edges) {
+                    edge->destination = query_graph[query_index - 1];
+                    query_graph[query_index - 1]->incoming_edges.push_back(edge);
+                }
+
+                for (Edge *edge : target_graph[target_index - 1]->outgoing_edges) {
+                    // spriječava stvaranje duplikatnih edgeva
+                    bool add_edge = true;
+                    for (auto it = edge->destination->incoming_edges.begin(); it != edge->destination->incoming_edges.end(); it++) {
+                        if ((*it)->origin == query_graph[query_index - 1]) {
+                            add_edge = false;
+                            edge->destination->incoming_edges.erase(it);
+                            break;
+                        }
+                    }
+                    edge->origin = query_graph[query_index - 1];
+                    if (add_edge)
+                        query_graph[query_index - 1]->outgoing_edges.push_back(edge);
+                }
+
+                //oslobađa iz memorije node iz target_grapha koji smo spojili sa nodom iz query_grapha
+                delete target_graph[target_index - 1];
+                target_graph[target_index - 1] = query_graph[query_index - 1];
+
+                prev_query_node = query_graph[query_index - 1];
+                prev_target_node = prev_query_node;
+                break;
+            }
+            case DiagonalMismatch: {
+                std::vector<Node *> target_aligned;
+                for (Node *node : query_graph[query_index - 1]->aligned_nodes) {
+                    node->aligned_nodes.push_back(target_graph[target_index - 1]);
+                    target_aligned.push_back(node);
+                }
+                query_graph[query_index - 1]->aligned_nodes.push_back(target_graph[target_index - 1]);
+
+                for (Node *node : target_graph[target_index - 1]->aligned_nodes) {
+                    node->aligned_nodes.push_back(query_graph[query_index - 1]);
+                    query_graph[query_index - 1]->aligned_nodes.push_back(node);
+                }
+
+                target_graph[target_index - 1]->aligned_nodes.push_back(query_graph[query_index - 1]);
+                for (Node *node : target_aligned) {
+                    target_graph[target_index - 1]->aligned_nodes.push_back(node);
+                }
+
+                prev_query_node = query_graph[query_index - 1];
+                prev_target_node = target_graph[target_index - 1];
+                break;
+            }
+            case Horizontal: {
+                prev_target_node = target_graph[target_index - 1];
+                break;
+            }
+            case Vertical: {
+                prev_query_node = query_graph[query_index - 1];
+                break;
+            }
+            case None: {
+                finished = true;
+                if (prev_query_node != prev_target_node) {
+                    query.start_nodes.push_back(prev_target_node);
+                }
+                break;
+            }
+        }
+
+        int new_query_index = std::get<0>(align_matrix[query_index][target_index].parent_index);
+        target_index = std::get<1>(align_matrix[query_index][target_index].parent_index);
+        query_index = new_query_index;
+    }
 }
 
 int GlobalAligner::AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix,
                                const char *query, unsigned int query_len,
                                const char *target, unsigned int target_len) {
     for (int i = 1; i < query_len + 1; i++) {
-        align_matrix[i][0] = {i * gap, Direction::Vertical};
+        align_matrix[i][0] = {i * gap, Direction::Vertical, std::tuple<int, int>(i - 1, 0)};
     }
     for (int j = 1; j < target_len + 1; j++) {
-        align_matrix[0][j] = {j * gap, Direction::Horizontal};
+        align_matrix[0][j] = {j * gap, Direction::Horizontal, std::tuple<int, int>(0, j - 1)};
     }
-    align_matrix[0][0] = {0, Direction::None};
+    align_matrix[0][0] = {0, Direction::None, std::tuple<int, int>(-1, -1)};
 
     for (int i = 1; i < query_len + 1; i++) {
         for (int j = 1; j < target_len + 1; j++) {
             Cell diagonal_cell;
             if (query[i - 1] == target[j - 1]) {  //Match
                 diagonal_cell = {align_matrix[i - 1][j - 1].value + match,
-                                 Direction::DiagonalMatch};
+                                 Direction::DiagonalMatch, std::tuple<int, int>(i - 1, j - 1)};
             } else {  //Mismatch
                 diagonal_cell = {align_matrix[i - 1][j - 1].value + mismatch,
-                                 Direction::DiagonalMismatch};
+                                 Direction::DiagonalMismatch, std::tuple<int, int>(i - 1, j - 1)};
             }
-            Cell up_cell = {align_matrix[i - 1][j].value + gap, Direction::Vertical};
-            Cell left_cell = {align_matrix[i][j - 1].value + gap, Direction::Horizontal};
+            Cell up_cell = {align_matrix[i - 1][j].value + gap, Direction::Vertical, std::tuple<int, int>(i - 1, j)};
+            Cell left_cell = {align_matrix[i][j - 1].value + gap, Direction::Horizontal, std::tuple<int, int>(i, j - 1)};
 
             if (diagonal_cell.value >= up_cell.value && diagonal_cell.value >= left_cell.value) {
                 align_matrix[i][j] = diagonal_cell;
@@ -67,69 +168,6 @@ int GlobalAligner::AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix,
         }
     }
     return align_matrix[query_len][target_len].value;
-}
-
-void GlobalAligner::GraphTwoSeq(Graph &empty_graph,
-                                std::vector<std::vector<Cell>> &align_matrix,
-                                const char *query, unsigned int query_len, const char *query_id,
-                                const char *target, unsigned int target_len, const char *target_id) {
-    Node *prev_query_node = nullptr, *prev_target_node = nullptr;
-    unsigned int query_index = query_len, target_index = target_len;
-
-    bool finished = false;
-    while (!finished) {
-        switch (align_matrix[query_index][target_index].direction) {
-            case Direction::DiagonalMatch: {
-                Node *query_node = Graph::addNewNode(query[query_index - 1], query_id, query_index, prev_query_node);
-                Node *target_node = query_node;
-                std::tuple<const char *, unsigned int> origin(target_id, target_index);
-                query_node->origin_of_letter.push_back(origin);
-
-                //dodaje edge koji nedostaje u slučaju da su prethodno bila dva različita noda
-                if (prev_target_node != prev_query_node && prev_target_node != nullptr) {
-                    Edge *edge = new Edge(query_node, prev_target_node);
-                    query_node->outgoing_edges.push_back(edge);
-                    prev_target_node->incoming_edges.push_back(edge);
-                }
-                prev_target_node = target_node;
-                prev_query_node = query_node;
-                query_index--;
-                target_index--;
-                break;
-            }
-
-            case Direction::DiagonalMismatch: {
-                prev_query_node = Graph::addNewNode(query[query_index - 1], query_id, query_index, prev_query_node);
-                prev_target_node = Graph::addNewNode(target[target_index - 1], target_id, target_index, prev_target_node);
-                query_index--;
-                target_index--;
-                break;
-            }
-
-            case Direction::Horizontal: {
-                prev_target_node = Graph::addNewNode(target[target_index - 1], target_id, target_index, prev_target_node);
-                target_index--;
-                break;
-            }
-
-            case Direction::Vertical: {
-                prev_query_node = Graph::addNewNode(query[query_index - 1], query_id, query_index, prev_query_node);
-                query_index--;
-                break;
-            }
-
-            case Direction::None: {
-                finished = true;
-                if (prev_query_node == prev_target_node) {
-                    empty_graph.start_nodes.push_back(prev_target_node);
-                } else {
-                    empty_graph.start_nodes.push_back(prev_target_node);
-                    empty_graph.start_nodes.push_back(prev_query_node);
-                }
-                break;
-            }
-        }
-    }
 }
 
 int GlobalAligner::AlignSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix,
@@ -185,67 +223,6 @@ int GlobalAligner::AlignSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix
         }
     }
     return align_matrix[graph.size()][target_len].value;
-}
-
-void GlobalAligner::GraphSeqAndGraph(std::vector<std::vector<Cell>> &align_matrix,
-                                     Graph &graph, std::vector<Node *> &query,
-                                     const char *target, unsigned int target_len, const char *target_id) {
-    Node *prev_query_node = nullptr, *prev_target_node = nullptr;
-    unsigned int query_index = query.size(), target_index = target_len;
-
-    bool finished = false;
-    while (!finished) {
-        switch (align_matrix[query_index][target_index].direction) {
-            case Direction::DiagonalMatch: {
-                std::tuple<const char *, unsigned int> origin(target_id, target_index);
-                query[query_index - 1]->origin_of_letter.push_back(origin);
-
-                //dodaje edge koji nedostaje u slučaju da su prethodno bila dva različita noda
-                if (prev_query_node != prev_target_node && prev_target_node != nullptr) {
-                    Edge *edge = new Edge(query[query_index - 1], prev_target_node);
-                    query[query_index - 1]->outgoing_edges.push_back(edge);
-                    prev_target_node->incoming_edges.push_back(edge);
-                }
-
-                prev_target_node = query[query_index - 1];
-                prev_query_node = prev_target_node;
-
-                int new_query_index = std::get<0>(align_matrix[query_index][target_index].parent_index);
-                target_index = std::get<1>(align_matrix[query_index][target_index].parent_index);
-                query_index = new_query_index;
-
-                break;
-            }
-
-            case Direction::DiagonalMismatch: {
-                prev_target_node = Graph::addNewNode(target[target_index - 1], target_id, target_index, prev_target_node);
-                int new_query_index = std::get<0>(align_matrix[query_index][target_index].parent_index);
-                target_index = std::get<1>(align_matrix[query_index][target_index].parent_index);
-                query_index = new_query_index;
-                break;
-            }
-
-            case Direction::Horizontal: {
-                prev_target_node = Graph::addNewNode(target[target_index - 1], target_id, target_index, prev_target_node);
-                target_index = std::get<1>(align_matrix[query_index][target_index].parent_index);
-                break;
-            }
-
-            case Direction::Vertical: {
-                prev_query_node = query[query_index - 1];
-                query_index = std::get<0>(align_matrix[query_index][target_index].parent_index);
-                break;
-            }
-
-            case Direction::None: {
-                finished = true;
-                if (prev_query_node != prev_target_node) {
-                    graph.start_nodes.push_back(prev_target_node);
-                }
-                break;
-            }
-        }
-    }
 }
 
 int GlobalAligner::AlignTwoGraph(std::vector<std::vector<Cell>> &align_matrix,
@@ -324,64 +301,4 @@ int GlobalAligner::AlignTwoGraph(std::vector<std::vector<Cell>> &align_matrix,
     }
 
     return align_matrix[query_graph.size()][target_graph.size()].value;
-}
-
-void GlobalAligner::GraphTwoGraph(std::vector<std::vector<Cell>> &align_matrix,
-                                  Graph &query, std::vector<Node *> &query_graph,
-                                  std::vector<Node *> &target_graph) {
-    Node *prev_query_node = nullptr, *prev_target_node = nullptr;
-    unsigned int query_index = query_graph.size(), target_index = target_graph.size();
-
-    bool finished = false;
-    while (!finished) {
-        Direction direction = align_matrix[query_index][target_index].direction;
-        switch (direction) {
-            case DiagonalMatch: {
-                for (std::tuple<const char *, unsigned int> origin : target_graph[target_index - 1]->origin_of_letter) {
-                    query_graph[query_index - 1]->origin_of_letter.push_back(origin);
-                }
-                for (Edge *edge : target_graph[target_index - 1]->incoming_edges) {
-                    edge->destination = query_graph[query_index - 1];
-                    query_graph[query_index - 1]->incoming_edges.push_back(edge);
-                }
-
-                for (Edge *edge : target_graph[target_index - 1]->outgoing_edges) {
-                    edge->origin = query_graph[query_index - 1];
-                    query_graph[query_index - 1]->outgoing_edges.push_back(edge);
-                }
-
-                //oslobađa iz memorije node iz target_grapha koji smo spojili sa nodom iz query_grapha
-                delete target_graph[target_index - 1];
-                target_graph[target_index - 1] = query_graph[query_index - 1];
-
-                prev_query_node = query_graph[query_index - 1];
-                prev_target_node = prev_query_node;
-                break;
-            }
-            case DiagonalMismatch: {
-                prev_query_node = query_graph[query_index - 1];
-                prev_target_node = target_graph[target_index - 1];
-                break;
-            }
-            case Horizontal: {
-                prev_target_node = target_graph[target_index - 1];
-                break;
-            }
-            case Vertical: {
-                prev_query_node = query_graph[query_index - 1];
-                break;
-            }
-            case None: {
-                finished = true;
-                if (prev_query_node != prev_target_node) {
-                    query.start_nodes.push_back(prev_target_node);
-                }
-                break;
-            }
-        }
-
-        int new_query_index = std::get<0>(align_matrix[query_index][target_index].parent_index);
-        target_index = std::get<1>(align_matrix[query_index][target_index].parent_index);
-        query_index = new_query_index;
-    }
 }
