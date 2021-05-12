@@ -11,5 +11,6 @@ int main(void) {
     Graph f;
     alig->AlignAndGraphTwoSeq(f, "CGTT", 4, "treca", "CTTG", 4, "cetvrta");
 
+    alig->AlignAndGraphTwoGraph(g, f);
     return 0;
 }
