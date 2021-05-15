@@ -11,7 +11,11 @@ add_executable(${PROJECT_NAME} "src/poa.cpp")
 add_library(alignment "src/alignment.cpp")
 add_library(graph "src/graph.cpp")
 
+if (NOT TARGET bioparser)
+  add_subdirectory(bioparser EXCLUDE_FROM_ALL)
+endif ()
+
 target_link_libraries(alignment graph)
 
-target_link_libraries(${PROJECT_NAME} alignment)
+target_link_libraries(${PROJECT_NAME} alignment bioparser)
 
