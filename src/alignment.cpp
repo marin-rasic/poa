@@ -148,7 +148,7 @@ std::tuple<int, int> Aligner::AlignSeqAndGraph(std::vector<std::vector<Cell>> &a
                 local_index = std::tuple<int, int>(i, j);
             }
 
-            if (i == graph.size() && align_matrix[i][j].value >= last_row_max_cell.value) {
+            if (graph[i - 1]->outgoing_edges.empty() && align_matrix[i][j].value >= last_row_max_cell.value) {
                 last_row_max_cell = align_matrix[i][j];
                 last_row_index = std::tuple<int, int>(i, j);
             }
@@ -257,11 +257,11 @@ std::tuple<int, int> Aligner::AlignTwoGraph(std::vector<std::vector<Cell>> &alig
                 local_index = std::tuple<int, int>(i, j);
             }
 
-            if (i == query_graph.size() && align_matrix[i][j].value >= last_row_max_cell.value) {
+            if (query_graph[i - 1]->outgoing_edges.empty() && align_matrix[i][j].value >= last_row_max_cell.value) {
                 last_row_max_cell = align_matrix[i][j];
                 last_row_index = std::tuple<int, int>(i, j);
             }
-            if (j == target_graph.size() && align_matrix[i][j].value >= last_col_max_cell.value) {
+            if (target_graph[j - 1]->outgoing_edges.empty() && align_matrix[i][j].value >= last_col_max_cell.value) {
                 last_col_max_cell = align_matrix[i][j];
                 last_col_index = std::tuple<int, int>(i, j);
             }
