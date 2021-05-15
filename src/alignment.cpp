@@ -90,6 +90,10 @@ std::tuple<int, int> Aligner::AlignSeqAndGraph(std::vector<std::vector<Cell>> &a
                                                std::vector<Node *> &graph,
                                                const char *target, unsigned int target_len,
                                                Cell min_cell) {
+    //for global alignment
+    Cell global_max_cell = {std::numeric_limits<int>::min(), Direction::None, std::tuple<int, int>(-1, -1)};
+    std::tuple<int, int> global_index;
+
     //for local alignment
     Cell local_max_cell = {std::numeric_limits<int>::min(), Direction::None, std::tuple<int, int>(-1, -1)};
     std::tuple<int, int> local_index;
@@ -134,6 +138,11 @@ std::tuple<int, int> Aligner::AlignSeqAndGraph(std::vector<std::vector<Cell>> &a
 
             align_matrix[i][j] = std::max({min_cell, dig_cell, up_cell, left_cell}, max_cell);
 
+            if (graph[i - 1]->outgoing_edges.empty() && j == target_len && align_matrix[i][j].value >= global_max_cell.value) {
+                global_max_cell = align_matrix[i][j];
+                global_index = std::tuple<int, int>(i, j);
+            }
+
             if (align_matrix[i][j].value >= local_max_cell.value) {
                 local_max_cell = align_matrix[i][j];
                 local_index = std::tuple<int, int>(i, j);
@@ -152,7 +161,7 @@ std::tuple<int, int> Aligner::AlignSeqAndGraph(std::vector<std::vector<Cell>> &a
 
     switch (alignment) {
         case Global:
-            return std::tuple<int, int>(graph.size(), target_len);
+            return global_index;
 
         case Local:
             return local_index;
@@ -168,6 +177,10 @@ std::tuple<int, int> Aligner::AlignTwoGraph(std::vector<std::vector<Cell>> &alig
                                             std::vector<Node *> &query_graph,
                                             std::vector<Node *> &target_graph,
                                             Cell min_cell) {
+    //for global alignment
+    Cell global_max_cell = {std::numeric_limits<int>::min(), Direction::None, std::tuple<int, int>(-1, -1)};
+    std::tuple<int, int> global_index;
+
     //for local alignment
     Cell local_max_cell = {std::numeric_limits<int>::min(), Direction::None, std::tuple<int, int>(-1, -1)};
     std::tuple<int, int> local_index;
@@ -233,6 +246,11 @@ std::tuple<int, int> Aligner::AlignTwoGraph(std::vector<std::vector<Cell>> &alig
             Cell left_cell = *std::max_element(left_values.begin(), left_values.end(), max_cell);
 
             align_matrix[i][j] = std::max({min_cell, dig_cell, up_cell, left_cell}, max_cell);
+
+            if (query_graph[i - 1]->outgoing_edges.empty() && target_graph[j - 1]->outgoing_edges.empty() && align_matrix[i][j].value >= global_max_cell.value) {
+                global_max_cell = align_matrix[i][j];
+                global_index = std::tuple<int, int>(i, j);
+            }
 
             if (align_matrix[i][j].value >= local_max_cell.value) {
                 local_max_cell = align_matrix[i][j];
@@ -380,6 +398,7 @@ void Aligner::AlignAndGraphTwoSeq(Graph &empty_graph,
                                   const char *query, unsigned int query_len, const char *query_id,
                                   const char *target, unsigned int target_len, const char *target_id) {
     std::vector<std::vector<Cell>> align_matrix(query_len + 1, std::vector<Cell>(target_len + 1));
+
     std::tuple<int, int> starting_index;
     switch (alignment) {
         case Global:
@@ -412,6 +431,7 @@ void Aligner::AlignAndGraphSeqAndGraph(Graph &query,
                                        const char *target, unsigned int target_len, const char *target_id) {
     std::vector<Node *> query_graph = query.TopologicalSort();
     std::vector<std::vector<Cell>> align_matrix(query_graph.size() + 1, std::vector<Cell>(target_len + 1));
+
     std::tuple<int, int> starting_index;
     switch (alignment) {
         case Global:
