@@ -2,16 +2,6 @@
 
 #include <queue>
 
-Node *Graph::addNewNode(char letter, const char *sequence_id, unsigned int index, Node *prev_node) {
-    Node *new_node = new Node(letter, sequence_id, index);
-    if (prev_node != nullptr) {
-        Edge *edge = new Edge(new_node, prev_node);
-        new_node->outgoing_edges.push_back(edge);
-        prev_node->incoming_edges.push_back(edge);
-    }
-    return new_node;
-}
-
 std::vector<Node *> Graph::TopologicalSort() {
     std::vector<Node *> sorted_nodes;
 

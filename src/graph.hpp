@@ -41,7 +41,6 @@ class Graph {
    public:
     std::vector<Node *> start_nodes;
 
-    static Node *addNewNode(char letter, const char *sequence_id, unsigned int index, Node *prevNode = nullptr);
     std::vector<Node *> TopologicalSort();
 };
 
