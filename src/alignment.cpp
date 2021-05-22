@@ -270,7 +270,7 @@ std::tuple<int, int> Aligner::AlignTwoGraph(std::vector<std::vector<Cell>> &alig
 
     switch (alignment) {
         case Global:
-            return std::tuple<int, int>(query_graph.size(), target_graph.size());
+            return global_index;
 
         case Local:
             return local_index;
