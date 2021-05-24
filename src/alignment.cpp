@@ -457,9 +457,9 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
     }
 }
 
-void Aligner::AlignAndGraphTwoSeq(Graph &empty_graph,
-                                  const char *query, unsigned int query_len, const char *query_id,
-                                  const char *target, unsigned int target_len, const char *target_id) {
+int Aligner::AlignAndGraphTwoSeq(Graph &empty_graph,
+                                 const char *query, unsigned int query_len, const char *query_id,
+                                 const char *target, unsigned int target_len, const char *target_id) {
     std::vector<std::vector<Cell>> align_matrix(query_len + 1, std::vector<Cell>(target_len + 1));
 
     std::tuple<int, int> starting_index;
@@ -489,10 +489,11 @@ void Aligner::AlignAndGraphTwoSeq(Graph &empty_graph,
     std::vector<Node *> top_target = target_graph.TopologicalSort();
 
     CreateGraph(align_matrix, empty_graph, top_query, target_graph, top_target, starting_index);
+    return align_matrix[std::get<0>(starting_index)][std::get<1>(starting_index)].value;
 }
 
-void Aligner::AlignAndGraphSeqAndGraph(Graph &query,
-                                       const char *target, unsigned int target_len, const char *target_id) {
+int Aligner::AlignAndGraphSeqAndGraph(Graph &query,
+                                      const char *target, unsigned int target_len, const char *target_id) {
     std::vector<Node *> query_graph = query.TopologicalSort();
     std::vector<std::vector<Cell>> align_matrix(query_graph.size() + 1, std::vector<Cell>(target_len + 1));
 
@@ -520,9 +521,10 @@ void Aligner::AlignAndGraphSeqAndGraph(Graph &query,
     std::vector<Node *> top_target = target_graph.TopologicalSort();
 
     CreateGraph(align_matrix, query, query_graph, target_graph, top_target, starting_index);
+    return align_matrix[std::get<0>(starting_index)][std::get<1>(starting_index)].value;
 }
 
-void Aligner::AlignAndGraphTwoGraph(Graph &query, Graph &target) {
+int Aligner::AlignAndGraphTwoGraph(Graph &query, Graph &target) {
     std::vector<Node *> query_graph = query.TopologicalSort();
     std::vector<Node *> target_graph = target.TopologicalSort();
     std::vector<std::vector<Cell>> align_matrix(query_graph.size() + 1, std::vector<Cell>(target_graph.size() + 1));
@@ -547,4 +549,5 @@ void Aligner::AlignAndGraphTwoGraph(Graph &query, Graph &target) {
     }
 
     CreateGraph(align_matrix, query, query_graph, target, target_graph, starting_index);
+    return align_matrix[std::get<0>(starting_index)][std::get<1>(starting_index)].value;
 }

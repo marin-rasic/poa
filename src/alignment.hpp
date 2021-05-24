@@ -23,24 +23,24 @@ class Aligner {
     Aligner(int match, int mismatch, int gap, Alignment alignment)
         : match(match), mismatch(mismatch), gap(gap), alignment(alignment){};
 
-    //općenita funckija za poravnavanje dva niza i stvaranje novog grafa na temelju tog poravnanja
-    virtual void AlignAndGraphTwoSeq(Graph &empty_graph,
-                                     const char *query, unsigned int query_len, const char *query_id,
-                                     const char *target, unsigned int target_len, const char *target_id);
+    //funckija za poravnavanje dva niza i stvaranje novog grafa na temelju tog poravnanja
+    int AlignAndGraphTwoSeq(Graph &empty_graph,
+                            const char *query, unsigned int query_len, const char *query_id,
+                            const char *target, unsigned int target_len, const char *target_id);
 
-    //općenita funkcija za poravnavanje niza i grafa i stvaranje novog grafa na temelju tog poravnanja
-    virtual void AlignAndGraphSeqAndGraph(Graph &query,
-                                          const char *target, unsigned int target_len, const char *target_id);
+    //funkcija za poravnavanje niza i grafa i stvaranje novog grafa na temelju tog poravnanja
+    int AlignAndGraphSeqAndGraph(Graph &query,
+                                 const char *target, unsigned int target_len, const char *target_id);
 
-    //općenita funckija za poravnavanje dva grafa i stvaranje novog grafa na temelju tog poravnanja
-    virtual void AlignAndGraphTwoGraph(Graph &query,
-                                       Graph &target);
+    //funckija za poravnavanje dva grafa i stvaranje novog grafa na temelju tog poravnanja
+    int AlignAndGraphTwoGraph(Graph &query,
+                              Graph &target);
 
     //funckija za stvaranje grafa na temelju poravnanja
-    virtual void CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
-                             Graph &query, std::vector<Node *> &query_graph,
-                             Graph &target, std::vector<Node *> &target_graph,
-                             std::tuple<int, int> starting_index);
+    void CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
+                     Graph &query, std::vector<Node *> &query_graph,
+                     Graph &target, std::vector<Node *> &target_graph,
+                     std::tuple<int, int> starting_index);
 
     std::tuple<int, int> AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix,
                                      const char *query, unsigned int query_len,
