@@ -2,6 +2,8 @@
 #include <tuple>
 #include <vector>
 
+class Graph;
+
 class Edge;
 
 class Node {
@@ -30,9 +32,9 @@ class Node {
     };
 
     // aligns two nodes
-    static void align_two_nodes(Node *a, Node *b, bool fuse = false);
+    static void align_two_nodes(Graph &target, Node *a, Node *b, bool fuse = false);
     // fuses two nodes
-    static void fuse_two_nodes(Node *a, Node *b);
+    static void fuse_two_nodes(Graph &target, Node *a, Node *b, bool align = true);
 };
 
 class Edge {

@@ -217,42 +217,6 @@ std::tuple<int, int> Aligner::AlignTwoGraph(std::vector<std::vector<Cell>> &alig
             Cell up_cell = {std::numeric_limits<int>::min(), Direction::None, std::tuple<int, int>(-1, -1)};
             Cell left_cell = {std::numeric_limits<int>::min(), Direction::None, std::tuple<int, int>(-1, -1)};
 
-            // pregledava trenutni query čvor
-            if (query_graph[i - 1]->incoming_edges.empty()) {
-                if (query_graph[i - 1]->letter == target_graph[j - 1]->letter) {  // Match
-                    diagonal_cell = compare_cells(diagonal_cell, {align_matrix[0][j - 1].value + match,
-                                                                  Direction::DiagonalMatch,
-                                                                  std::tuple<int, int>(0, j - 1)});
-                } else {
-                    diagonal_cell = compare_cells(diagonal_cell, {align_matrix[0][j - 1].value + mismatch,
-                                                                  Direction::DiagonalMismatch,
-                                                                  std::tuple<int, int>(0, j - 1)});
-                }
-                up_cell = compare_cells(up_cell, {align_matrix[0][j].value + gap,
-                                                  Direction::Vertical,
-                                                  std::tuple<int, int>(0, j)});
-            } else {
-                if (query_graph[i - 1]->letter == target_graph[j - 1]->letter) {  // Match
-                    for (Edge *edge : query_graph[i - 1]->incoming_edges) {
-                        diagonal_cell = compare_cells(diagonal_cell, {align_matrix[edge->origin->index][j - 1].value + match,
-                                                                      Direction::DiagonalMatch,
-                                                                      std::tuple<int, int>(edge->origin->index, j - 1)});
-                        up_cell = compare_cells(up_cell, {align_matrix[edge->origin->index][j].value + gap,
-                                                          Direction::Vertical,
-                                                          std::tuple<int, int>(edge->origin->index, j)});
-                    }
-                } else {
-                    for (Edge *edge : query_graph[i - 1]->incoming_edges) {
-                        diagonal_cell = compare_cells(diagonal_cell, {align_matrix[edge->origin->index][j - 1].value + mismatch,
-                                                                      Direction::DiagonalMismatch,
-                                                                      std::tuple<int, int>(edge->origin->index, j - 1)});
-                        up_cell = compare_cells(up_cell, {align_matrix[edge->origin->index][j].value + gap,
-                                                          Direction::Vertical,
-                                                          std::tuple<int, int>(edge->origin->index, j)});
-                    }
-                }
-            }
-
             // pregledava trenutni target čvor
             if (target_graph[j - 1]->incoming_edges.empty()) {
                 if (query_graph[i - 1]->letter == target_graph[j - 1]->letter) {  // Match
@@ -285,6 +249,42 @@ std::tuple<int, int> Aligner::AlignTwoGraph(std::vector<std::vector<Cell>> &alig
                         left_cell = compare_cells(left_cell, {align_matrix[i][edge->origin->index].value + gap,
                                                               Direction::Horizontal,
                                                               std::tuple<int, int>(i, edge->origin->index)});
+                    }
+                }
+            }
+
+            // pregledava trenutni query čvor
+            if (query_graph[i - 1]->incoming_edges.empty()) {
+                if (query_graph[i - 1]->letter == target_graph[j - 1]->letter) {  // Match
+                    diagonal_cell = compare_cells(diagonal_cell, {align_matrix[0][j - 1].value + match,
+                                                                  Direction::DiagonalMatch,
+                                                                  std::tuple<int, int>(0, j - 1)});
+                } else {
+                    diagonal_cell = compare_cells(diagonal_cell, {align_matrix[0][j - 1].value + mismatch,
+                                                                  Direction::DiagonalMismatch,
+                                                                  std::tuple<int, int>(0, j - 1)});
+                }
+                up_cell = compare_cells(up_cell, {align_matrix[0][j].value + gap,
+                                                  Direction::Vertical,
+                                                  std::tuple<int, int>(0, j)});
+            } else {
+                if (query_graph[i - 1]->letter == target_graph[j - 1]->letter) {  // Match
+                    for (Edge *edge : query_graph[i - 1]->incoming_edges) {
+                        diagonal_cell = compare_cells(diagonal_cell, {align_matrix[edge->origin->index][j - 1].value + match,
+                                                                      Direction::DiagonalMatch,
+                                                                      std::tuple<int, int>(edge->origin->index, j - 1)});
+                        up_cell = compare_cells(up_cell, {align_matrix[edge->origin->index][j].value + gap,
+                                                          Direction::Vertical,
+                                                          std::tuple<int, int>(edge->origin->index, j)});
+                    }
+                } else {
+                    for (Edge *edge : query_graph[i - 1]->incoming_edges) {
+                        diagonal_cell = compare_cells(diagonal_cell, {align_matrix[edge->origin->index][j - 1].value + mismatch,
+                                                                      Direction::DiagonalMismatch,
+                                                                      std::tuple<int, int>(edge->origin->index, j - 1)});
+                        up_cell = compare_cells(up_cell, {align_matrix[edge->origin->index][j].value + gap,
+                                                          Direction::Vertical,
+                                                          std::tuple<int, int>(edge->origin->index, j)});
                     }
                 }
             }
@@ -340,25 +340,16 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
         Direction direction = align_matrix[query_index][target_index].direction;
         switch (direction) {
             case DiagonalMatch: {
-                Node::fuse_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1]);
+                Node::fuse_two_nodes(target, query_graph[query_index - 1], target_graph[target_index - 1]);
 
-                if ((target_graph[target_index - 1]->incoming_edges).empty()) {
-                    target.start_nodes.erase(std::remove(target.start_nodes.begin(),
-                                                         target.start_nodes.end(),
-                                                         target_graph[target_index - 1]),
-                                             target.start_nodes.end());
-                }
-                // frees target node from memory
-                delete target_graph[target_index - 1];
                 target_graph[target_index - 1] = query_graph[query_index - 1];
-
                 prev_query_node = query_graph[query_index - 1];
                 prev_target_node = prev_query_node;
                 break;
             }
 
             case DiagonalMismatch: {
-                Node::align_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1]);
+                Node::align_two_nodes(target, query_graph[query_index - 1], target_graph[target_index - 1]);
 
                 // if target node is the starting node in target_graph
                 // make it a starting node in query_graph
@@ -395,6 +386,9 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
             case None: {
                 finished = true;
                 for (Node *target_node : target.start_nodes) {
+                    if (target_node == nullptr) {
+                        continue;
+                    }
                     bool add = true;
                     for (Node *query_node : query.start_nodes) {
                         if (target_node == query_node) {

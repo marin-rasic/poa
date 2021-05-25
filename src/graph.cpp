@@ -55,13 +55,21 @@ void Graph::LinearGraph(Graph &empty_graph, const char *sequence, unsigned int s
     }
 }
 
-void Node::align_two_nodes(Node *a, Node *b, bool fuse) {
+void Node::align_two_nodes(Graph &target, Node *a, Node *b, bool fuse) {
     std::vector<Node *> a_aligned;
 
     for (Node *node : b->aligned_nodes) {
-        node->aligned_nodes.push_back(a);
-        a_aligned.push_back(node);
-        auto it = node->aligned_nodes.begin();
+        for (Node *node_a : a->aligned_nodes) {
+            if (node->letter == node_a->letter) {
+                fuse_two_nodes(target, node_a, node, false);
+            } else {
+                node->aligned_nodes.push_back(a);
+                a_aligned.push_back(node);
+
+                node_a->aligned_nodes.push_back(node);
+                node->aligned_nodes.push_back(node_a);
+            }
+        }
 
         if (fuse) {
             node->aligned_nodes.erase(std::remove(node->aligned_nodes.begin(),
@@ -79,20 +87,22 @@ void Node::align_two_nodes(Node *a, Node *b, bool fuse) {
             b->aligned_nodes.push_back(node);
         }
         a->aligned_nodes.push_back(b);
+    }
 
-        for (Node *node : a_aligned) {
-            a->aligned_nodes.push_back(node);
-        }
+    for (Node *node : a_aligned) {
+        a->aligned_nodes.push_back(node);
     }
 }
 
-void Node::fuse_two_nodes(Node *a, Node *b) {
+void Node::fuse_two_nodes(Graph &target, Node *a, Node *b, bool align) {
     // add all origins from target node to query node
     for (std::tuple<const char *, unsigned int> origin : b->origin_of_letter) {
         a->origin_of_letter.push_back(origin);
     }
 
-    Node::align_two_nodes(a, b, true);
+    if (align) {
+        Node::align_two_nodes(target, a, b, true);
+    }
 
     // change destination of all incoming edges of target node to query node
     for (Edge *edge : b->incoming_edges) {
@@ -113,9 +123,6 @@ void Node::fuse_two_nodes(Node *a, Node *b) {
             for (auto it = edge->destination->incoming_edges.begin(); it != edge->destination->incoming_edges.end(); it++) {
                 if ((*it)->origin == b) {
                     edge->destination->incoming_edges.erase(it);
-
-                    // frees the deleted edge from memory
-                    delete *it;
                     break;
                 }
             }
@@ -124,4 +131,14 @@ void Node::fuse_two_nodes(Node *a, Node *b) {
             a->outgoing_edges.push_back(edge);
         }
     }
+
+    //if b is starting node in target graph, remove it from target graphs starting nodes
+    if ((b->incoming_edges).empty()) {
+        target.start_nodes.erase(std::remove(target.start_nodes.begin(),
+                                             target.start_nodes.end(),
+                                             b),
+                                 target.start_nodes.end());
+    }
+    // frees target node from memory
+    delete b;
 }
