@@ -1,5 +1,3 @@
-#include <algorithm>
-
 #include "graph.hpp"
 
 enum Direction { None,

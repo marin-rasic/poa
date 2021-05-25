@@ -340,14 +340,19 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
         Direction direction = align_matrix[query_index][target_index].direction;
         switch (direction) {
             case DiagonalMatch: {
+                // add all origins from target node to query node
                 for (std::tuple<const char *, unsigned int> origin : target_graph[target_index - 1]->origin_of_letter) {
                     query_graph[query_index - 1]->origin_of_letter.push_back(origin);
                 }
 
+                Node::align_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1], true);
+
+                // check if target node is starting node
                 bool target_starting_node = false;
                 if ((target_graph[target_index - 1]->incoming_edges).empty()) {
                     target_starting_node = true;
                 } else {
+                    // change destination of all incoming edges of target node to query node
                     for (Edge *edge : target_graph[target_index - 1]->incoming_edges) {
                         edge->destination = query_graph[query_index - 1];
                         query_graph[query_index - 1]->incoming_edges.push_back(edge);
@@ -355,7 +360,7 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                 }
 
                 for (Edge *edge : target_graph[target_index - 1]->outgoing_edges) {
-                    // spriječava stvaranje duplikatnih edgeva
+                    // prevents creation of duplicate edges
                     bool add_edge = true;
                     for (Edge *dest_edge : edge->destination->incoming_edges) {
                         if (dest_edge->origin == query_graph[query_index - 1]) {
@@ -380,7 +385,7 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                     target.start_nodes.erase(std::remove(target.start_nodes.begin(), target.start_nodes.end(), target_graph[target_index - 1]),
                                              target.start_nodes.end());
                 }
-                // oslobađa iz memorije node iz target_grapha koji smo spojili sa nodom iz query_grapha
+                // frees target node from memory
                 delete target_graph[target_index - 1];
                 target_graph[target_index - 1] = query_graph[query_index - 1];
 
@@ -389,23 +394,10 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                 break;
             }
             case DiagonalMismatch: {
-                std::vector<Node *> target_aligned;
-                for (Node *node : query_graph[query_index - 1]->aligned_nodes) {
-                    node->aligned_nodes.push_back(target_graph[target_index - 1]);
-                    target_aligned.push_back(node);
-                }
-                query_graph[query_index - 1]->aligned_nodes.push_back(target_graph[target_index - 1]);
+                Node::align_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1]);
 
-                for (Node *node : target_graph[target_index - 1]->aligned_nodes) {
-                    node->aligned_nodes.push_back(query_graph[query_index - 1]);
-                    query_graph[query_index - 1]->aligned_nodes.push_back(node);
-                }
-
-                target_graph[target_index - 1]->aligned_nodes.push_back(query_graph[query_index - 1]);
-                for (Node *node : target_aligned) {
-                    target_graph[target_index - 1]->aligned_nodes.push_back(node);
-                }
-
+                // if target node is the starting node in target_graph
+                // make it a starting node in query_graph
                 if (target_graph[target_index - 1]->incoming_edges.empty()) {
                     query.start_nodes.push_back(target_graph[target_index - 1]);
                     target.start_nodes.erase(std::remove(target.start_nodes.begin(),
@@ -481,11 +473,11 @@ int Aligner::AlignAndGraphTwoSeq(Graph &empty_graph,
             break;
     }
 
-    LinearGraph(empty_graph, query, query_len, query_id);
+    Graph::LinearGraph(empty_graph, query, query_len, query_id);
     std::vector<Node *> top_query = empty_graph.TopologicalSort();
 
     Graph target_graph;
-    LinearGraph(target_graph, target, target_len, target_id);
+    Graph::LinearGraph(target_graph, target, target_len, target_id);
     std::vector<Node *> top_target = target_graph.TopologicalSort();
 
     CreateGraph(align_matrix, empty_graph, top_query, target_graph, top_target, starting_index);
@@ -517,7 +509,7 @@ int Aligner::AlignAndGraphSeqAndGraph(Graph &query,
     }
 
     Graph target_graph;
-    LinearGraph(target_graph, target, target_len, target_id);
+    Graph::LinearGraph(target_graph, target, target_len, target_id);
     std::vector<Node *> top_target = target_graph.TopologicalSort();
 
     CreateGraph(align_matrix, query, query_graph, target_graph, top_target, starting_index);

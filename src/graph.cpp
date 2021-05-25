@@ -39,7 +39,7 @@ std::vector<Node *> Graph::TopologicalSort() {
     return sorted_nodes;
 }
 
-void LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence_len, const char *sequence_id) {
+void Graph::LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence_len, const char *sequence_id) {
     Node *new_node;
     Node *prev_node = nullptr;
     for (int i = 0; i < sequence_len; i++) {
@@ -52,5 +52,36 @@ void LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence
             empty_graph.start_nodes.push_back(new_node);
         }
         prev_node = new_node;
+    }
+}
+
+void Node::align_two_nodes(Node *a, Node *b, bool fuse) {
+    std::vector<Node *> a_aligned;
+
+    for (Node *node : b->aligned_nodes) {
+        node->aligned_nodes.push_back(a);
+        a_aligned.push_back(node);
+        auto it = node->aligned_nodes.begin();
+
+        if (fuse) {
+            node->aligned_nodes.erase(std::remove(node->aligned_nodes.begin(),
+                                                  node->aligned_nodes.end(),
+                                                  b),
+                                      node->aligned_nodes.end());
+        }
+    }
+
+    if (!fuse) {
+        b->aligned_nodes.push_back(a);
+
+        for (Node *node : a->aligned_nodes) {
+            node->aligned_nodes.push_back(b);
+            b->aligned_nodes.push_back(node);
+        }
+        a->aligned_nodes.push_back(b);
+
+        for (Node *node : a_aligned) {
+            a->aligned_nodes.push_back(node);
+        }
     }
 }

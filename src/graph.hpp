@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <tuple>
 #include <vector>
 
@@ -27,6 +28,8 @@ class Node {
         std::tuple<const char *, unsigned int> origin(sequence_id, index);
         origin_of_letter.push_back(origin);
     };
+
+    static void align_two_nodes(Node *a, Node *b, bool fuse = false);
 };
 
 class Edge {
@@ -42,6 +45,6 @@ class Graph {
     std::vector<Node *> start_nodes;
 
     std::vector<Node *> TopologicalSort();
-};
 
-void LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence_len, const char *sequence_id);
+    static void LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence_len, const char *sequence_id);
+};
