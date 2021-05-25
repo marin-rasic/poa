@@ -340,49 +340,12 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
         Direction direction = align_matrix[query_index][target_index].direction;
         switch (direction) {
             case DiagonalMatch: {
-                // add all origins from target node to query node
-                for (std::tuple<const char *, unsigned int> origin : target_graph[target_index - 1]->origin_of_letter) {
-                    query_graph[query_index - 1]->origin_of_letter.push_back(origin);
-                }
+                Node::fuse_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1]);
 
-                Node::align_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1], true);
-
-                // check if target node is starting node
-                bool target_starting_node = false;
                 if ((target_graph[target_index - 1]->incoming_edges).empty()) {
-                    target_starting_node = true;
-                } else {
-                    // change destination of all incoming edges of target node to query node
-                    for (Edge *edge : target_graph[target_index - 1]->incoming_edges) {
-                        edge->destination = query_graph[query_index - 1];
-                        query_graph[query_index - 1]->incoming_edges.push_back(edge);
-                    }
-                }
-
-                for (Edge *edge : target_graph[target_index - 1]->outgoing_edges) {
-                    // prevents creation of duplicate edges
-                    bool add_edge = true;
-                    for (Edge *dest_edge : edge->destination->incoming_edges) {
-                        if (dest_edge->origin == query_graph[query_index - 1]) {
-                            add_edge = false;
-                            break;
-                        }
-                    }
-                    if (!add_edge) {
-                        for (auto it = edge->destination->incoming_edges.begin(); it != edge->destination->incoming_edges.end(); it++) {
-                            if ((*it)->origin == target_graph[target_index - 1]) {
-                                edge->destination->incoming_edges.erase(it);
-                                break;
-                            }
-                        }
-                    } else {
-                        edge->origin = query_graph[query_index - 1];
-                        query_graph[query_index - 1]->outgoing_edges.push_back(edge);
-                    }
-                }
-
-                if (target_starting_node) {
-                    target.start_nodes.erase(std::remove(target.start_nodes.begin(), target.start_nodes.end(), target_graph[target_index - 1]),
+                    target.start_nodes.erase(std::remove(target.start_nodes.begin(),
+                                                         target.start_nodes.end(),
+                                                         target_graph[target_index - 1]),
                                              target.start_nodes.end());
                 }
                 // frees target node from memory
@@ -393,6 +356,7 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                 prev_target_node = prev_query_node;
                 break;
             }
+
             case DiagonalMismatch: {
                 Node::align_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1]);
 
@@ -410,6 +374,7 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                 prev_target_node = target_graph[target_index - 1];
                 break;
             }
+
             case Horizontal: {
                 if (target_graph[target_index - 1]->incoming_edges.empty()) {
                     query.start_nodes.push_back(target_graph[target_index - 1]);
@@ -421,10 +386,12 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                 prev_target_node = target_graph[target_index - 1];
                 break;
             }
+
             case Vertical: {
                 prev_query_node = query_graph[query_index - 1];
                 break;
             }
+
             case None: {
                 finished = true;
                 for (Node *target_node : target.start_nodes) {

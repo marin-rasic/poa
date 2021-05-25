@@ -85,3 +85,43 @@ void Node::align_two_nodes(Node *a, Node *b, bool fuse) {
         }
     }
 }
+
+void Node::fuse_two_nodes(Node *a, Node *b) {
+    // add all origins from target node to query node
+    for (std::tuple<const char *, unsigned int> origin : b->origin_of_letter) {
+        a->origin_of_letter.push_back(origin);
+    }
+
+    Node::align_two_nodes(a, b, true);
+
+    // change destination of all incoming edges of target node to query node
+    for (Edge *edge : b->incoming_edges) {
+        edge->destination = a;
+        a->incoming_edges.push_back(edge);
+    }
+
+    for (Edge *edge : b->outgoing_edges) {
+        // prevents creation of duplicate edges
+        bool add_edge = true;
+        for (Edge *dest_edge : edge->destination->incoming_edges) {
+            if (dest_edge->origin == a) {
+                add_edge = false;
+                break;
+            }
+        }
+        if (!add_edge) {
+            for (auto it = edge->destination->incoming_edges.begin(); it != edge->destination->incoming_edges.end(); it++) {
+                if ((*it)->origin == b) {
+                    edge->destination->incoming_edges.erase(it);
+
+                    // frees the deleted edge from memory
+                    delete *it;
+                    break;
+                }
+            }
+        } else {
+            edge->origin = a;
+            a->outgoing_edges.push_back(edge);
+        }
+    }
+}

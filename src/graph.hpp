@@ -29,7 +29,10 @@ class Node {
         origin_of_letter.push_back(origin);
     };
 
+    // aligns two nodes
     static void align_two_nodes(Node *a, Node *b, bool fuse = false);
+    // fuses two nodes
+    static void fuse_two_nodes(Node *a, Node *b);
 };
 
 class Edge {
