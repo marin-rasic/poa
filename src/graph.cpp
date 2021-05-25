@@ -59,16 +59,22 @@ void Node::align_two_nodes(Graph &target, Node *a, Node *b, bool fuse) {
     std::vector<Node *> a_aligned;
 
     for (Node *node : b->aligned_nodes) {
+        a_aligned.push_back(node);
+
+        bool align_to_a = true;
+
         for (Node *node_a : a->aligned_nodes) {
             if (node->letter == node_a->letter) {
                 fuse_two_nodes(target, node_a, node, false);
+                align_to_a = false;
             } else {
-                node->aligned_nodes.push_back(a);
-                a_aligned.push_back(node);
-
                 node_a->aligned_nodes.push_back(node);
                 node->aligned_nodes.push_back(node_a);
             }
+        }
+
+        if (align_to_a) {
+            node->aligned_nodes.push_back(a);
         }
 
         if (fuse) {
