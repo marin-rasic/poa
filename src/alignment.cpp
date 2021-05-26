@@ -332,7 +332,6 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                           Graph &query, std::vector<Node *> &query_graph,
                           Graph &target, std::vector<Node *> &target_graph,
                           std::tuple<int, int> starting_index) {
-    Node *prev_query_node = nullptr, *prev_target_node = nullptr;
     unsigned int query_index = std::get<0>(starting_index), target_index = std::get<1>(starting_index);
 
     bool finished = false;
@@ -341,10 +340,6 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
         switch (direction) {
             case DiagonalMatch: {
                 Node::fuse_two_nodes(target, query_graph[query_index - 1], target_graph[target_index - 1]);
-
-                target_graph[target_index - 1] = query_graph[query_index - 1];
-                prev_query_node = query_graph[query_index - 1];
-                prev_target_node = prev_query_node;
                 break;
             }
 
@@ -361,8 +356,6 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                                              target.start_nodes.end());
                 }
 
-                prev_query_node = query_graph[query_index - 1];
-                prev_target_node = target_graph[target_index - 1];
                 break;
             }
 
@@ -374,12 +367,10 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                                                          target_graph[target_index - 1]),
                                              target.start_nodes.end());
                 }
-                prev_target_node = target_graph[target_index - 1];
                 break;
             }
 
             case Vertical: {
-                prev_query_node = query_graph[query_index - 1];
                 break;
             }
 
