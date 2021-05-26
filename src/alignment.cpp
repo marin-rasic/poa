@@ -377,9 +377,6 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
             case None: {
                 finished = true;
                 for (Node *target_node : target.start_nodes) {
-                    if (target_node == nullptr) {
-                        continue;
-                    }
                     bool add = true;
                     for (Node *query_node : query.start_nodes) {
                         if (target_node == query_node) {
