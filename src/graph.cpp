@@ -27,13 +27,10 @@ std::vector<Node *> Graph::TopologicalSort() {
             //ako cvor vise nema ulaznih rubova dodamo ga u sortiranu listu
             if (--e->destination->num_remain_edges == 0) {
                 nodes.push(e->destination);
+                //resetiranje varijable num_remain_edges za moguće buduće topološko sortiranje
+                node->num_remain_edges = -1;
             }
         }
-    }
-
-    //resetiranje varijable num_remain_edges za moguće buduće topološko sortiranje
-    for (Node *node : sorted_nodes) {
-        node->num_remain_edges = -1;
     }
 
     return sorted_nodes;
@@ -55,7 +52,7 @@ void Graph::LinearGraph(Graph &empty_graph, const char *sequence, unsigned int s
     }
 }
 
-void Node::align_two_nodes(Graph &target, Node *a, Node *b, bool fuse) {
+void Node::align_two_nodes(Node *a, Node *b, bool fuse, Graph &target) {
     std::vector<Node *> a_aligned;
 
     for (Node *node : b->aligned_nodes) {
@@ -63,7 +60,7 @@ void Node::align_two_nodes(Graph &target, Node *a, Node *b, bool fuse) {
 
         for (Node *node_a : a->aligned_nodes) {
             if (node->letter == node_a->letter) {
-                fuse_two_nodes(target, node_a, node, false);
+                fuse_two_nodes(node_a, node, false, target);
                 align_to_a = false;
             } else {
                 node_a->aligned_nodes.push_back(node);
@@ -99,14 +96,14 @@ void Node::align_two_nodes(Graph &target, Node *a, Node *b, bool fuse) {
     }
 }
 
-void Node::fuse_two_nodes(Graph &target, Node *a, Node *b, bool align) {
+void Node::fuse_two_nodes(Node *a, Node *b, bool align, Graph &target) {
     // add all origins from target node to query node
     for (std::tuple<const char *, unsigned int> origin : b->origin_of_letter) {
         a->origin_of_letter.push_back(origin);
     }
 
     if (align) {
-        Node::align_two_nodes(target, a, b, true);
+        Node::align_two_nodes(a, b, true, target);
     }
 
     // change destination of all incoming edges of target node to query node

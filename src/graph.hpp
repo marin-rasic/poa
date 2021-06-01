@@ -21,7 +21,6 @@ class Node {
 
     //number of remaining incoming edges - used for topological sort
     int num_remain_edges = -1;
-
     //index in topological sort
     int index;
 
@@ -32,9 +31,9 @@ class Node {
     };
 
     // aligns two nodes
-    static void align_two_nodes(Graph &target, Node *a, Node *b, bool fuse = false);
+    static void align_two_nodes(Node *a, Node *b, bool fuse, Graph &target);
     // fuses two nodes
-    static void fuse_two_nodes(Graph &target, Node *a, Node *b, bool align = true);
+    static void fuse_two_nodes(Node *a, Node *b, bool align, Graph &target);
 };
 
 class Edge {
