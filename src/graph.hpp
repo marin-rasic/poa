@@ -24,6 +24,10 @@ class Node {
     //index in topological sort
     int index;
 
+    //used for searching consensus paths
+    int consensus_score = 0;
+    Edge *consensus_edge = nullptr;
+
     Node(char letter) : letter(letter){};
     Node(char letter, const char *sequence_id, unsigned int index) : letter(letter) {
         std::tuple<const char *, unsigned int> origin(sequence_id, index);
@@ -41,6 +45,8 @@ class Edge {
     Node *origin;
     Node *destination;
 
+    int CalculateConsensusScore();
+
     Edge(Node *origin, Node *destination) : origin(origin), destination(destination){};
 };
 
@@ -51,4 +57,6 @@ class Graph {
     std::vector<Node *> TopologicalSort();
 
     static void LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence_len, const char *sequence_id);
+
+    std::string FindConsensus();
 };

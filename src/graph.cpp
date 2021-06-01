@@ -1,6 +1,7 @@
 #include "graph.hpp"
 
 #include <queue>
+#include <unordered_map>
 
 std::vector<Node *> Graph::TopologicalSort() {
     std::vector<Node *> sorted_nodes;
@@ -27,10 +28,13 @@ std::vector<Node *> Graph::TopologicalSort() {
             //ako cvor vise nema ulaznih rubova dodamo ga u sortiranu listu
             if (--e->destination->num_remain_edges == 0) {
                 nodes.push(e->destination);
-                //resetiranje varijable num_remain_edges za moguće buduće topološko sortiranje
-                node->num_remain_edges = -1;
             }
         }
+    }
+
+    //resetiranje varijable num_remain_edges za moguće buduće topološko sortiranje
+    for (Node *node : sorted_nodes) {
+        node->num_remain_edges = -1;
     }
 
     return sorted_nodes;
@@ -143,4 +147,68 @@ void Node::fuse_two_nodes(Node *a, Node *b, bool align, Graph &target) {
     }
     // frees target node from memory
     delete b;
+}
+
+std::string build_consensus(Node *node) {
+    std::string consensus = "";
+    consensus = node->letter + consensus;
+    do {
+        node = node->consensus_edge->origin;
+        consensus = node->letter + consensus;
+    } while (!node->incoming_edges.empty());
+    return consensus;
+}
+
+int Edge::CalculateConsensusScore() {
+    std::unordered_map<const char *, bool> origins;
+    int number_of_seq = 0;
+    for (auto orig : this->origin->origin_of_letter) {
+        origins[std::get<0>(orig)] = true;
+    }
+    for (auto orig : this->destination->origin_of_letter) {
+        if (origins.find(std::get<0>(orig)) != origins.end()) {
+            number_of_seq++;
+        }
+    }
+    return number_of_seq;
+}
+
+std::string Graph::FindConsensus() {
+    std::vector<Node *> top_sort = this->TopologicalSort();
+
+    Node *best_node = nullptr;
+    int best_node_score = 0;
+
+    for (Node *node : top_sort) {
+        Edge *best_edge = nullptr;
+        int best_edge_score = 0;
+
+        for (Edge *incoming_edge : node->incoming_edges) {
+            int edge_score = incoming_edge->CalculateConsensusScore();
+
+            if (edge_score > best_edge_score) {
+                best_edge_score = edge_score;
+                best_edge = incoming_edge;
+            } else if (edge_score == best_edge_score) {
+                best_edge = best_edge->origin->consensus_score > incoming_edge->origin->consensus_score
+                                ? best_edge
+                                : incoming_edge;
+            }
+        }
+
+        if (best_edge) {
+            node->consensus_score += best_edge_score + best_edge->origin->consensus_score;
+            node->consensus_edge = best_edge;
+            if (best_node == nullptr) {
+                best_node = node;
+                best_node_score = node->consensus_score;
+            } else {
+                best_node = best_node->consensus_score > node->consensus_score
+                                ? best_node
+                                : node;
+            }
+        }
+    }
+
+    return build_consensus(best_node);
 }
