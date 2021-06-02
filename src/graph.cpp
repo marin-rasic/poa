@@ -156,6 +156,7 @@ std::string build_consensus(Node *node) {
         node = node->consensus_edge->origin;
         consensus = node->letter + consensus;
     } while (!node->incoming_edges.empty());
+
     return consensus;
 }
 
@@ -173,42 +174,58 @@ int Edge::CalculateConsensusScore() {
     return number_of_seq;
 }
 
-std::string Graph::FindConsensus() {
-    std::vector<Node *> top_sort = this->TopologicalSort();
-
-    Node *best_node = nullptr;
+int traverse_graph(std::vector<Node *> &graph, int starting_index = 0) {
+    int best_node_index = -1;
     int best_node_score = 0;
 
-    for (Node *node : top_sort) {
+    for (int i = starting_index + 1; i < graph.size(); i++) {
         Edge *best_edge = nullptr;
         int best_edge_score = 0;
 
-        for (Edge *incoming_edge : node->incoming_edges) {
+        for (Edge *incoming_edge : graph[i]->incoming_edges) {
             int edge_score = incoming_edge->CalculateConsensusScore();
 
-            if (edge_score > best_edge_score) {
-                best_edge_score = edge_score;
+            if (best_edge) {
+                if (best_edge->origin->consensus_score + best_edge_score <=
+                    incoming_edge->origin->consensus_score + edge_score) {
+                    best_edge = incoming_edge;
+                    best_edge_score = edge_score;
+                }
+            } else {
                 best_edge = incoming_edge;
-            } else if (edge_score == best_edge_score) {
-                best_edge = best_edge->origin->consensus_score > incoming_edge->origin->consensus_score
-                                ? best_edge
-                                : incoming_edge;
+                best_edge_score = edge_score;
             }
         }
 
         if (best_edge) {
-            node->consensus_score += best_edge_score + best_edge->origin->consensus_score;
-            node->consensus_edge = best_edge;
-            if (best_node == nullptr) {
-                best_node = node;
-                best_node_score = node->consensus_score;
+            graph[i]->consensus_score += best_edge_score + best_edge->origin->consensus_score;
+            graph[i]->consensus_edge = best_edge;
+            if (best_node_index == -1) {
+                best_node_index = i;
+                best_node_score = graph[i]->consensus_score;
             } else {
-                best_node = best_node->consensus_score > node->consensus_score
-                                ? best_node
-                                : node;
+                best_node_index = graph[best_node_index]->consensus_score > graph[i]->consensus_score
+                                      ? best_node_index
+                                      : i;
             }
         }
     }
 
-    return build_consensus(best_node);
+    return best_node_index;
+}
+
+std::string Graph::FindConsensus() {
+    std::vector<Node *> top_sort = this->TopologicalSort();
+    int best_node_index = traverse_graph(top_sort, -1);
+
+    if (!top_sort[best_node_index]->outgoing_edges.empty()) {
+        for (Node *node : top_sort) {
+            if (node != top_sort[best_node_index]) {
+                node->consensus_score = -1;
+            }
+        }
+        best_node_index = traverse_graph(top_sort, best_node_index);
+    }
+
+    return build_consensus(top_sort[best_node_index]);
 }
