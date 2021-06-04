@@ -51,11 +51,11 @@ void Help() {
 int main(int argc, char *argv[]) {
     int opt;
 
-    int8_t match = 1;
-    int8_t mismatch = -1;
-    int8_t gap = -1;
+    int8_t match = 5;
+    int8_t mismatch = -4;
+    int8_t gap = -8;
     int8_t alignment = 0;
-    int8_t num_of_threads = 1;
+    int num_of_threads = 1;
 
     while ((opt = getopt_long(argc, argv, "a:g:hm:n:t:", long_options, NULL)) != -1) {
         switch (opt) {
@@ -75,12 +75,14 @@ int main(int argc, char *argv[]) {
                 mismatch = atoi(optarg);
                 break;
             case 't':
-                num_of_threads = atoi(optarg) > omp_get_max_threads() ? omp_get_max_threads() : atoi(optarg);
+                num_of_threads = atoi(optarg);
                 break;
             default:
                 return 1;
         }
     }
+
+    Aligner *a = new Aligner(match, mismatch, gap, (Alignment)alignment);
 
     if (argc != optind + 1) {
         std::cout << "Wrong number of arguments" << std::endl;
@@ -90,52 +92,47 @@ int main(int argc, char *argv[]) {
     std::string sequence_file = argv[optind];
     auto sequences = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(sequence_file)->Parse(-1);
 
-    Aligner *a = new Aligner(match, mismatch, gap, (Alignment)alignment);
+    Graph g;
+    std::vector<Graph> graphs(sequences.size() / 2, g);
+    int max_index = sequences.size() % 2 == 0 ? sequences.size() : sequences.size() - 1;
 
-    Graph graphs[num_of_threads];
-    int index = sequences.size() / num_of_threads;
-
-    std::vector<int> used_index(num_of_threads);
-
-    for (int i = 0; i < num_of_threads; i++) {
-        LinearGraph(graphs[i],
-                    sequences[i * index]->data.c_str(),
-                    sequences[i * index]->data.size(),
-                    sequences[i * index]->name.c_str());
-        used_index.push_back(i * index);
+#pragma omp parallel for num_threads(num_of_threads)
+    for (int i = 0; i < sequences.size(); i = i + 2) {
+        a->AlignAndGraphTwoSeq(graphs[i / 2],
+                               sequences[i]->data.c_str(),
+                               sequences[i]->data.size(),
+                               sequences[i]->name.c_str(),
+                               sequences[i + 1]->data.c_str(),
+                               sequences[i + 1]->data.size(),
+                               sequences[i + 1]->name.c_str());
     }
 
-#pragma omp parallel for schedule(static) num_threads(num_of_threads)
-    for (int i = 0; i < sequences.size(); i++) {
-        bool used = false;
-        for (int index : used_index) {
-            if (i == index) {
-                used = true;
-            }
+    if (max_index == sequences.size() - 1) {
+        a->AlignAndGraphSeqAndGraph(graphs[0],
+                                    sequences[max_index]->data.c_str(),
+                                    sequences[max_index]->data.size(),
+                                    sequences[max_index]->data.c_str());
+    }
+
+    do {
+        std::vector<Graph> new_graphs;
+        int max_index = graphs.size() % 2 == 0 ? graphs.size() : graphs.size() - 1;
+
+#pragma omp parallel for num_threads(num_of_threads)
+        for (int i = 0; i < max_index; i = i + 2) {
+            a->AlignAndGraphTwoGraph(graphs[i], graphs[i + 1]);
+            new_graphs.push_back(graphs[i]);
         }
 
-        if (used) {
-            continue;
+        if (max_index == graphs.size() - 1) {
+            a->AlignAndGraphTwoGraph(graphs[0], graphs[max_index]);
         }
+        graphs = new_graphs;
+    } while (graphs.size() / 2 >= 1);
 
-        a->AlignAndGraphSeqAndGraph(graphs[omp_get_thread_num()],
-                                    sequences[i]->data.c_str(),
-                                    sequences[i]->data.size(),
-                                    sequences[i]->name.c_str());
-    }
+    std::string consensus = graphs[0].FindConsensus();
 
-    for (int i = 1; i < num_of_threads; i++) {
-        a->AlignAndGraphTwoGraph(graphs[0], graphs[i]);
-    }
-
-    std::vector<Node *> graph = graphs[0].TopologicalSort();
-    for (Node *node : graph) {
-        std::cout << node->letter << " ";
-        for (auto origin : node->origin_of_letter) {
-            std::cout << std::get<0>(origin) << std::get<1>(origin) << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    std::cout << "Consensus " << consensus.size() << std::endl;
+    std::cout << consensus << std::endl;
     return 0;
 }
