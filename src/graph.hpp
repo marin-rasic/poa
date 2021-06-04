@@ -35,9 +35,9 @@ class Node {
     };
 
     // aligns two nodes
-    static void align_two_nodes(Node *a, Node *b, bool fuse, Graph &target);
+    static void AlignTwoNodes(Node *a, Node *b, bool fuse, Graph &target);
     // fuses two nodes
-    static void fuse_two_nodes(Node *a, Node *b, bool align, Graph &target);
+    static void FuseTwoNodes(Node *a, Node *b, bool align, Graph &target);
 };
 
 class Edge {

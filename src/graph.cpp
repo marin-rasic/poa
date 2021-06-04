@@ -56,7 +56,7 @@ void Graph::LinearGraph(Graph &empty_graph, const char *sequence, unsigned int s
     }
 }
 
-void Node::align_two_nodes(Node *a, Node *b, bool fuse, Graph &target) {
+void Node::AlignTwoNodes(Node *a, Node *b, bool fuse, Graph &target) {
     std::vector<Node *> a_aligned;
 
     for (Node *node : b->aligned_nodes) {
@@ -64,7 +64,7 @@ void Node::align_two_nodes(Node *a, Node *b, bool fuse, Graph &target) {
 
         for (Node *node_a : a->aligned_nodes) {
             if (node->letter == node_a->letter) {
-                fuse_two_nodes(node_a, node, false, target);
+                FuseTwoNodes(node_a, node, false, target);
                 align_to_a = false;
             } else {
                 node_a->aligned_nodes.push_back(node);
@@ -100,14 +100,14 @@ void Node::align_two_nodes(Node *a, Node *b, bool fuse, Graph &target) {
     }
 }
 
-void Node::fuse_two_nodes(Node *a, Node *b, bool align, Graph &target) {
+void Node::FuseTwoNodes(Node *a, Node *b, bool align, Graph &target) {
     // add all origins from target node to query node
     for (std::tuple<const char *, unsigned int> origin : b->origin_of_letter) {
         a->origin_of_letter.push_back(origin);
     }
 
     if (align) {
-        Node::align_two_nodes(a, b, true, target);
+        Node::AlignTwoNodes(a, b, true, target);
     }
 
     // change destination of all incoming edges of target node to query node
@@ -145,11 +145,9 @@ void Node::fuse_two_nodes(Node *a, Node *b, bool align, Graph &target) {
                                              b),
                                  target.start_nodes.end());
     }
-    // frees target node from memory
-    delete b;
 }
 
-std::string build_consensus(Node *node) {
+std::string BuildConsensus(Node *node) {
     std::string consensus = "";
     consensus = node->letter + consensus;
     do {
@@ -174,7 +172,7 @@ int Edge::CalculateConsensusScore() {
     return number_of_seq;
 }
 
-int traverse_graph(std::vector<Node *> &graph, int starting_index = 0) {
+int TraverseGraph(std::vector<Node *> &graph, int starting_index = 0) {
     int best_node_index = -1;
     int best_node_score = 0;
 
@@ -216,7 +214,7 @@ int traverse_graph(std::vector<Node *> &graph, int starting_index = 0) {
 
 std::string Graph::FindConsensus() {
     std::vector<Node *> top_sort = this->TopologicalSort();
-    int best_node_index = traverse_graph(top_sort, -1);
+    int best_node_index = TraverseGraph(top_sort, -1);
 
     if (!top_sort[best_node_index]->outgoing_edges.empty()) {
         for (Node *node : top_sort) {
@@ -224,8 +222,8 @@ std::string Graph::FindConsensus() {
                 node->consensus_score = -1;
             }
         }
-        best_node_index = traverse_graph(top_sort, best_node_index);
+        best_node_index = TraverseGraph(top_sort, best_node_index);
     }
 
-    return build_consensus(top_sort[best_node_index]);
+    return BuildConsensus(top_sort[best_node_index]);
 }

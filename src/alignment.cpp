@@ -319,12 +319,12 @@ void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
         Direction direction = align_matrix[query_index][target_index].direction;
         switch (direction) {
             case DiagonalMatch: {
-                Node::fuse_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1], true, target);
+                Node::FuseTwoNodes(query_graph[query_index - 1], target_graph[target_index - 1], true, target);
                 break;
             }
 
             case DiagonalMismatch: {
-                Node::align_two_nodes(query_graph[query_index - 1], target_graph[target_index - 1], false, target);
+                Node::AlignTwoNodes(query_graph[query_index - 1], target_graph[target_index - 1], false, target);
 
                 // if target node is the starting node in target_graph
                 // make it a starting node in query_graph
