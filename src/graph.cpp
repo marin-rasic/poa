@@ -236,6 +236,9 @@ std::string Graph::FindConsensus() {
         }
 
         int new_index = TraverseGraph(top_sort, best_node_index);
+        if (new_index == -1) {
+            break;
+        }
 
         best_node_index = new_index;
     }
