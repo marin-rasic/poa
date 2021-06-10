@@ -1,6 +1,6 @@
 #include "alignment.hpp"
 
-//uspoređuje ćelije i vraća veću
+//compares the cells values and return the one with bigger value
 Cell compare_cells(Cell a, Cell b) {
     if (a.value >= b.value) {
         return a;
@@ -8,7 +8,7 @@ Cell compare_cells(Cell a, Cell b) {
     return b;
 }
 
-// popunjuje prvi redak i prvi stupac matrice za poravnanje
+// fills the first row and column of align matrix
 void InitilazeMatrix(std::vector<std::vector<Cell>> &align_matrix, int init_gap,
                      unsigned int query_len, unsigned int target_len, bool direction) {
     Direction vert = Vertical;
@@ -27,7 +27,7 @@ void InitilazeMatrix(std::vector<std::vector<Cell>> &align_matrix, int init_gap,
     align_matrix[0][0] = {0, Direction::None, std::tuple<int, int>(-1, -1)};
 }
 
-// izračunava matricu poravnanja
+// calculates the alignment matrix
 std::tuple<int, int> Aligner::AlignTwoSeq(std::vector<std::vector<Cell>> &align_matrix,
                                           const char *query, unsigned int query_len,
                                           const char *target, unsigned int target_len,
@@ -45,11 +45,11 @@ std::tuple<int, int> Aligner::AlignTwoSeq(std::vector<std::vector<Cell>> &align_
     for (int i = 1; i < query_len + 1; i++) {
         for (int j = 1; j < target_len + 1; j++) {
             Cell diagonal_cell;
-            if (query[i - 1] == target[j - 1]) {  // Match
+            if (query[i - 1] == target[j - 1]) {
                 diagonal_cell = {align_matrix[i - 1][j - 1].value + match,
                                  Direction::DiagonalMatch,
                                  std::tuple<int, int>(i - 1, j - 1)};
-            } else {  // Mismatch
+            } else {
                 diagonal_cell = {align_matrix[i - 1][j - 1].value + mismatch,
                                  Direction::DiagonalMismatch,
                                  std::tuple<int, int>(i - 1, j - 1)};
@@ -119,7 +119,7 @@ std::tuple<int, int> Aligner::AlignSeqAndGraph(std::vector<std::vector<Cell>> &a
             int alig_value = graph[i - 1]->letter == target[j - 1] ? match : mismatch;
             Direction alig_dir = graph[i - 1]->letter == target[j - 1] ? DiagonalMatch : DiagonalMismatch;
 
-            // provjera jeli trenutni čvor početni čvor grafa
+            // checks if the current node is the starting node
             if (graph[i - 1]->incoming_edges.empty()) {
                 diagonal_cell = compare_cells(diagonal_cell, {align_matrix[0][j - 1].value + alig_value,
                                                               alig_dir,
@@ -307,7 +307,6 @@ std::tuple<int, int> Aligner::AlignTwoGraph(std::vector<std::vector<Cell>> &alig
     return std::tuple<int, int>(-1, -1);
 }
 
-// stvara graf na temelju matrice poravnanja
 void Aligner::CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                           Graph &query, std::vector<Node *> &query_graph,
                           Graph &target, std::vector<Node *> &target_graph,

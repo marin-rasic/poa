@@ -6,7 +6,7 @@
 std::vector<Node *> Graph::TopologicalSort() {
     std::vector<Node *> sorted_nodes;
 
-    //čvorovi koji nemaju ulazne rubove
+    //nodes without incoming edges
     std::queue<Node *> nodes;
 
     for (Node *n : this->start_nodes) {
@@ -21,18 +21,18 @@ std::vector<Node *> Graph::TopologicalSort() {
 
         sorted_nodes.push_back(node);
         for (Edge *e : node->outgoing_edges) {
-            //ako prvi put prolazimo kroz čvor postavi mu broj preostalih ulazećih rubova
+            //if this is the first time coming through this note we set its number of incoming edges
             if (e->destination->num_remain_edges == -1) {
                 e->destination->num_remain_edges = e->destination->incoming_edges.size();
             }
-            //ako cvor vise nema ulaznih rubova dodamo ga u sortiranu listu
+            //if the nodes has no more incoming edges we added to vector nodes
             if (--e->destination->num_remain_edges == 0) {
                 nodes.push(e->destination);
             }
         }
     }
 
-    //resetiranje varijable num_remain_edges za moguće buduće topološko sortiranje
+    //reset of num_remain_edges variable for future topological sorts
     for (Node *node : sorted_nodes) {
         node->num_remain_edges = -1;
     }
@@ -57,6 +57,7 @@ void Graph::LinearGraph(Graph &empty_graph, const char *sequence, unsigned int s
 }
 
 void Node::AlignTwoNodes(Node *a, Node *b, bool fuse, Graph &target) {
+    //fuse aligned nodes which have the same letter
     for (Node *node_a : a->aligned_nodes) {
         for (Node *node_b : b->aligned_nodes) {
             if (node_a->letter == node_b->letter) {

@@ -21,20 +21,20 @@ class Aligner {
     Aligner(int match, int mismatch, int gap, Alignment alignment)
         : match(match), mismatch(mismatch), gap(gap), alignment(alignment){};
 
-    //funckija za poravnavanje dva niza i stvaranje novog grafa na temelju tog poravnanja
+    //aligns two sequences and creates graph based on that alignment
     int AlignAndGraphTwoSeq(Graph &empty_graph,
                             const char *query, unsigned int query_len, const char *query_id,
                             const char *target, unsigned int target_len, const char *target_id);
 
-    //funkcija za poravnavanje niza i grafa i stvaranje novog grafa na temelju tog poravnanja
+    //aligns POA graph and sequence and creates graph based on that alignment
     int AlignAndGraphSeqAndGraph(Graph &query,
                                  const char *target, unsigned int target_len, const char *target_id);
 
-    //funckija za poravnavanje dva grafa i stvaranje novog grafa na temelju tog poravnanja
+    //aligns two POA graphs and creates graph based on that alignment
     int AlignAndGraphTwoGraph(Graph &query,
                               Graph &target);
 
-    //funckija za stvaranje grafa na temelju poravnanja
+    //creates POA graph based on an alignment
     void CreateGraph(std::vector<std::vector<Cell>> &align_matrix,
                      Graph &query, std::vector<Node *> &query_graph,
                      Graph &target, std::vector<Node *> &target_graph,

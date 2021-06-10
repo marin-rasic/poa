@@ -51,10 +51,10 @@ void Help() {
 int main(int argc, char *argv[]) {
     int opt;
 
-    int8_t match = 5;
-    int8_t mismatch = -4;
-    int8_t gap = -8;
-    int8_t alignment = 0;
+    int match = 5;
+    int mismatch = -4;
+    int gap = -8;
+    int alignment = 0;
     int num_of_threads = 1;
 
     while ((opt = getopt_long(argc, argv, "a:g:hm:n:t:", long_options, NULL)) != -1) {
@@ -91,14 +91,16 @@ int main(int argc, char *argv[]) {
 
     std::string sequence_file = argv[optind];
     auto sequences = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(sequence_file)->Parse(-1);
+    std::vector<Graph *> graphs;
 
-    Graph g;
-    std::vector<Graph> graphs(sequences.size() / 2, g);
+    for (int i = 0; i < sequences.size() / 2; i++) {
+        graphs.push_back(new Graph());
+    }
     int max_index = sequences.size() % 2 == 0 ? sequences.size() : sequences.size() - 1;
 
 #pragma omp parallel for num_threads(num_of_threads)
-    for (int i = 0; i < sequences.size(); i = i + 2) {
-        a->AlignAndGraphTwoSeq(graphs[i / 2],
+    for (int i = 0; i < max_index; i = i + 2) {
+        a->AlignAndGraphTwoSeq(*graphs[i / 2],
                                sequences[i]->data.c_str(),
                                sequences[i]->data.size(),
                                sequences[i]->name.c_str(),
@@ -108,29 +110,33 @@ int main(int argc, char *argv[]) {
     }
 
     if (max_index == sequences.size() - 1) {
-        a->AlignAndGraphSeqAndGraph(graphs[0],
+        a->AlignAndGraphSeqAndGraph(*graphs[0],
                                     sequences[max_index]->data.c_str(),
                                     sequences[max_index]->data.size(),
-                                    sequences[max_index]->data.c_str());
+                                    sequences[max_index]->name.c_str());
     }
 
     do {
-        std::vector<Graph> new_graphs;
+        std::vector<Graph *> new_graphs;
         int max_index = graphs.size() % 2 == 0 ? graphs.size() : graphs.size() - 1;
 
-#pragma omp parallel for num_threads(num_of_threads)
-        for (int i = 0; i < max_index; i = i + 2) {
-            a->AlignAndGraphTwoGraph(graphs[i], graphs[i + 1]);
-            new_graphs.push_back(graphs[i]);
+#pragma omp parallel num_threads(num_of_threads)
+        {
+#pragma omp for
+            for (int i = 0; i < max_index; i = i + 2) {
+                a->AlignAndGraphTwoGraph(*graphs[i], *graphs[i + 1]);
+                new_graphs.push_back(graphs[i]);
+            }
         }
 
         if (max_index == graphs.size() - 1) {
-            a->AlignAndGraphTwoGraph(graphs[0], graphs[max_index]);
+            a->AlignAndGraphTwoGraph(*new_graphs[0], *graphs[max_index]);
         }
+
         graphs = new_graphs;
     } while (graphs.size() / 2 >= 1);
 
-    std::string consensus = graphs[0].FindConsensus();
+    std::string consensus = graphs[0]->FindConsensus();
 
     std::cout << "Consensus " << consensus.size() << std::endl;
     std::cout << consensus << std::endl;

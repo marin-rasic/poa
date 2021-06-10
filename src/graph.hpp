@@ -10,13 +10,13 @@ class Node {
    public:
     char letter;
 
-    //vektor koji sprema podatak o id niza iz kojeg slovo dolazi i poziciji tog slova u tom nizu
+    //id of sequences from which the letter comes from and the index of the letter within those sequences
     std::vector<std::tuple<const char *, unsigned int>> origin_of_letter;
 
     std::vector<Edge *> incoming_edges;
     std::vector<Edge *> outgoing_edges;
 
-    //ostali nodovi s kojima je ovaj node alignan
+    //other nodes this node is aligned to
     std::vector<Node *> aligned_nodes;
 
     //number of remaining incoming edges - used for topological sort
@@ -56,6 +56,7 @@ class Graph {
 
     std::vector<Node *> TopologicalSort();
 
+    //creates a POA graph from sequence
     static void LinearGraph(Graph &empty_graph, const char *sequence, unsigned int sequence_len, const char *sequence_id);
 
     std::string FindConsensus();
