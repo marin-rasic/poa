@@ -57,67 +57,69 @@ void Graph::LinearGraph(Graph &empty_graph, const char *sequence, unsigned int s
 }
 
 void Node::AlignTwoNodes(Node *a, Node *b, bool fuse, Graph &target) {
-    std::vector<Node *> a_aligned;
+    for (Node *node_a : a->aligned_nodes) {
+        for (Node *node_b : b->aligned_nodes) {
+            if (node_a->letter == node_b->letter) {
+                b->aligned_nodes.erase(std::remove(b->aligned_nodes.begin(),
+                                                   b->aligned_nodes.end(),
+                                                   node_b),
+                                       b->aligned_nodes.end());
 
-    for (Node *node : b->aligned_nodes) {
-        bool align_to_a = true;
-
-        for (Node *node_a : a->aligned_nodes) {
-            if (node->letter == node_a->letter) {
-                FuseTwoNodes(node_a, node, false, target);
-                align_to_a = false;
-            } else {
-                node_a->aligned_nodes.push_back(node);
-                node->aligned_nodes.push_back(node_a);
-            }
-        }
-
-        if (align_to_a) {
-            a_aligned.push_back(node);
-            node->aligned_nodes.push_back(a);
-
-            if (fuse) {
-                node->aligned_nodes.erase(std::remove(node->aligned_nodes.begin(),
-                                                      node->aligned_nodes.end(),
-                                                      b),
-                                          node->aligned_nodes.end());
+                for (Node *other_node : b->aligned_nodes) {
+                    other_node->aligned_nodes.erase(std::remove(other_node->aligned_nodes.begin(),
+                                                                other_node->aligned_nodes.end(),
+                                                                node_b),
+                                                    other_node->aligned_nodes.end());
+                }
+                FuseTwoNodes(node_a, node_b, false, target);
+                break;
             }
         }
     }
 
-    if (!fuse) {
-        b->aligned_nodes.push_back(a);
+    for (Node *node_a : a->aligned_nodes) {
+        for (Node *node_b : b->aligned_nodes) {
+            node_a->aligned_nodes.push_back(node_b);
+            node_b->aligned_nodes.push_back(node_a);
+        }
+    }
 
-        for (Node *node : a->aligned_nodes) {
-            node->aligned_nodes.push_back(b);
-            b->aligned_nodes.push_back(node);
+    if (fuse) {
+        for (Node *node_b : b->aligned_nodes) {
+            a->aligned_nodes.push_back(node_b);
+            node_b->aligned_nodes.erase(std::remove(node_b->aligned_nodes.begin(),
+                                                    node_b->aligned_nodes.end(),
+                                                    b),
+                                        node_b->aligned_nodes.end());
+            node_b->aligned_nodes.push_back(a);
+        }
+    } else {
+        for (Node *node_a : a->aligned_nodes) {
+            for (Node *node_b : b->aligned_nodes) {
+                a->aligned_nodes.push_back(node_b);
+                b->aligned_nodes.push_back(node_a);
+            }
         }
         a->aligned_nodes.push_back(b);
-    }
-
-    for (Node *node : a_aligned) {
-        a->aligned_nodes.push_back(node);
+        b->aligned_nodes.push_back(a);
     }
 }
 
 void Node::FuseTwoNodes(Node *a, Node *b, bool align, Graph &target) {
-    // add all origins from target node to query node
+    // add all origins from node b to node a
     for (std::tuple<const char *, unsigned int> origin : b->origin_of_letter) {
         a->origin_of_letter.push_back(origin);
     }
 
-    if (align) {
-        Node::AlignTwoNodes(a, b, true, target);
-    }
-
-    // change destination of all incoming edges of target node to query node
+    // change the destination of all incoming edges of node b to node a
     for (Edge *edge : b->incoming_edges) {
         edge->destination = a;
         a->incoming_edges.push_back(edge);
     }
 
+    // change the origin of all outgoing edges of node b to node a
     for (Edge *edge : b->outgoing_edges) {
-        // prevents creation of duplicate edges
+        // if an edge from node a to edge->destination already exists do not add it
         bool add_edge = true;
         for (Edge *dest_edge : edge->destination->incoming_edges) {
             if (dest_edge->origin == a) {
@@ -125,6 +127,7 @@ void Node::FuseTwoNodes(Node *a, Node *b, bool align, Graph &target) {
                 break;
             }
         }
+        // if it the edge exists, remove the edge connecting node b to edge->destination
         if (!add_edge) {
             for (auto it = edge->destination->incoming_edges.begin(); it != edge->destination->incoming_edges.end(); it++) {
                 if ((*it)->origin == b) {
@@ -136,6 +139,10 @@ void Node::FuseTwoNodes(Node *a, Node *b, bool align, Graph &target) {
             edge->origin = a;
             a->outgoing_edges.push_back(edge);
         }
+    }
+
+    if (align) {
+        AlignTwoNodes(a, b, true, target);
     }
 
     //if b is starting node in target graph, remove it from target graphs starting nodes
@@ -172,7 +179,7 @@ int Edge::CalculateConsensusScore() {
     return number_of_seq;
 }
 
-int TraverseGraph(std::vector<Node *> &graph, int starting_index = 0) {
+int TraverseGraph(std::vector<Node *> &graph, int starting_index = -1) {
     int best_node_index = -1;
     int best_node_score = 0;
 
@@ -181,6 +188,10 @@ int TraverseGraph(std::vector<Node *> &graph, int starting_index = 0) {
         int best_edge_score = 0;
 
         for (Edge *incoming_edge : graph[i]->incoming_edges) {
+            if (incoming_edge->origin->consensus_score < 0) {
+                continue;
+            }
+
             int edge_score = incoming_edge->CalculateConsensusScore();
 
             if (best_edge) {
@@ -214,15 +225,18 @@ int TraverseGraph(std::vector<Node *> &graph, int starting_index = 0) {
 
 std::string Graph::FindConsensus() {
     std::vector<Node *> top_sort = this->TopologicalSort();
-    int best_node_index = TraverseGraph(top_sort, -1);
+    int best_node_index = TraverseGraph(top_sort);
 
-    if (!top_sort[best_node_index]->outgoing_edges.empty()) {
+    while (!top_sort[best_node_index]->outgoing_edges.empty()) {
         for (Node *node : top_sort) {
             if (node != top_sort[best_node_index]) {
                 node->consensus_score = -1;
             }
         }
-        best_node_index = TraverseGraph(top_sort, best_node_index);
+
+        int new_index = TraverseGraph(top_sort, best_node_index);
+
+        best_node_index = new_index;
     }
 
     return BuildConsensus(top_sort[best_node_index]);
